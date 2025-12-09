@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -13,12 +12,22 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
+            $table->string('username', 50)->unique();
+            $table->string('email', 150)->unique();
             $table->string('password');
-            $table->rememberToken();
-            $table->timestamps();
+            $table->string('nom', 100)->nullable();
+            $table->string('prenom', 100)->nullable();
+            $table->date('date_naissance')->nullable();
+            $table->enum('genre', ['homme', 'femme', 'autre'])->default('autre');
+            $table->text('bio')->nullable();
+            $table->string('profile_photo', 255)->nullable();
+            $table->string('cover_photo', 255)->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamps(); // created_at, updated_at
+            $table->softDeletes(); // deleted_at
+
+            $table->index('created_at', 'idx_users_created_at');
+            $table->fullText(['nom', 'prenom', 'username'], 'ft_users_name');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
