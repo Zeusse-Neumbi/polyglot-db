@@ -23,8 +23,8 @@ return new class extends Migration {
             $table->string('profile_photo', 255)->nullable();
             $table->string('cover_photo', 255)->nullable();
             $table->boolean('is_active')->default(true);
-            $table->timestamps(); // created_at, updated_at
-            $table->softDeletes(); // deleted_at
+            $table->timestamps();
+            $table->softDeletes();
 
             $table->index('created_at', 'idx_users_created_at');
             $table->fullText(['nom', 'prenom', 'username'], 'ft_users_name');

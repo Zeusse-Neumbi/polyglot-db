@@ -10,6 +10,21 @@ class Reaction extends Model
     protected $connection = 'mongodb';
     use HasFactory;
 
+    protected static function booted()
+    {
+        static::created(function ($reaction) {
+            if ($reaction->post) {
+                $reaction->post->incrementLikesCount();
+            }
+        });
+
+        static::deleted(function ($reaction) {
+            if ($reaction->post) {
+                $reaction->post->decrementLikesCount();
+            }
+        });
+    }
+
     protected $fillable = [
         'post_id',
         'user_id',

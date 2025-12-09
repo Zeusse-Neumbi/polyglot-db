@@ -21,9 +21,6 @@ return new class extends Migration {
             $table->json('attachments')->nullable();
             $table->boolean('is_read')->default(false);
             $table->timestamps();
-            // Note: MongoDB handles timestamps differently but dateTime is fine for storage.
-            // Often we use $table->timestamps() for auto management.
-            // But let's keep created_at explicit if intended.
 
             $table->index(['conversation_id', 'created_at'], 'idx_messages_conv_created');
         });

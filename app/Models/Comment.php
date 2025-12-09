@@ -11,6 +11,27 @@ class Comment extends Model
     protected $connection = 'mongodb';
     use HasFactory, SoftDeletes;
 
+    protected static function booted()
+    {
+        static::created(function ($comment) {
+            if ($comment->post) {
+                $comment->post->incrementCommentsCount();
+            }
+        });
+
+        static::deleted(function ($comment) {
+            if ($comment->post) {
+                $comment->post->decrementCommentsCount();
+            }
+        });
+
+        static::restored(function ($comment) {
+            if ($comment->post) {
+                $comment->post->incrementCommentsCount();
+            }
+        });
+    }
+
     protected $fillable = [
         'post_id',
         'user_id',

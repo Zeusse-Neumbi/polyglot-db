@@ -15,7 +15,7 @@ return new class extends Migration {
     {
         Schema::connection('mongodb')->create('posts', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id')->index(); // Reference to MariaDB user
+            $table->unsignedBigInteger('user_id')->index(); 
             $table->text('content')->nullable();
             $table->string('media_url', 512)->nullable();
             $table->enum('media_type', ['image', 'video', 'audio', 'link', 'none'])->default('none');
@@ -27,8 +27,6 @@ return new class extends Migration {
 
             $table->index(['user_id', 'created_at'], 'idx_post_user_created');
             $table->index('created_at', 'idx_post_created');
-            // Full text indexes in Mongo can be created slightly differently or via raw commands, 
-            // but the driver often supports text().
             $table->index(['content' => 'text'], 'ft_posts_content');
         });
     }
