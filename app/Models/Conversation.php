@@ -10,6 +10,9 @@ class Conversation extends Model
 {
     use HasFactory, HybridRelations;
 
+    const UPDATED_AT = null;
+
+
     protected $fillable = ['type'];
 
     public function users()

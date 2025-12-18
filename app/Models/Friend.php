@@ -9,6 +9,9 @@ class Friend extends Model
 {
     use HasFactory;
 
+    const UPDATED_AT = null;
+
+
     public $incrementing = false;
     protected $primaryKey = ['user_id_1', 'user_id_2'];
 

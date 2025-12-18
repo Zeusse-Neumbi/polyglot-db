@@ -23,6 +23,7 @@ return new class extends Migration {
             $table->string('profile_photo', 255)->nullable();
             $table->string('cover_photo', 255)->nullable();
             $table->boolean('is_active')->default(true);
+            $table->rememberToken();
             $table->timestamps();
             $table->softDeletes();
 

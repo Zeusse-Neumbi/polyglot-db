@@ -9,6 +9,9 @@ class Page extends Model
 {
     use HasFactory;
 
+    const UPDATED_AT = null;
+
+
     protected $fillable = [
         'owner_id',
         'name',
