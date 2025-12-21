@@ -16,6 +16,7 @@ class PageFactory extends Factory
             'name' => fake()->company(),
             'description' => fake()->paragraph(),
             'category' => fake()->jobTitle(),
+            'avatar' => fake()->imageUrl(200, 200, 'business'),
             'owner_id' => User::factory(),
         ];
     }

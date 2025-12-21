@@ -5,14 +5,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use MongoDB\Laravel\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Redis;
 
 class Post extends Model
 {
     protected $connection = 'mongodb';
     use HasFactory, SoftDeletes;
 
+    /**
+     * Cache TTL in seconds (1 hour).
+     */
+    const CACHE_TTL = 3600;
+
     protected $fillable = [
-        'user_id',
+        'author_id',
+        'author_type',
         'content',
         'media_url',
         'media_type',
@@ -21,9 +28,9 @@ class Post extends Model
         'comments_count',
     ];
 
-    public function user()
+    public function author()
     {
-        return $this->belongsTo(User::class);
+        return $this->morphTo();
     }
 
     public function comments()
@@ -42,11 +49,11 @@ class Post extends Model
     public function getCachedLikesCountAttribute()
     {
         $key = "post:{$this->id}:likes_count";
-        $count = \Illuminate\Support\Facades\Redis::get($key);
+        $count = Redis::get($key);
 
         if ($count === null) {
             $count = $this->likes_count ?? 0;
-            \Illuminate\Support\Facades\Redis::set($key, $count);
+            Redis::setex($key, self::CACHE_TTL, $count);
         }
 
         return (int) $count;
@@ -58,11 +65,11 @@ class Post extends Model
     public function getCachedCommentsCountAttribute()
     {
         $key = "post:{$this->id}:comments_count";
-        $count = \Illuminate\Support\Facades\Redis::get($key);
+        $count = Redis::get($key);
 
         if ($count === null) {
             $count = $this->comments_count ?? 0;
-            \Illuminate\Support\Facades\Redis::set($key, $count);
+            Redis::setex($key, self::CACHE_TTL, $count);
         }
 
         return (int) $count;
@@ -70,37 +77,50 @@ class Post extends Model
 
     /**
      * Increment the Redis likes count (and database for persistence).
+     * Also refreshes the cache TTL.
      */
     public function incrementLikesCount()
     {
-        \Illuminate\Support\Facades\Redis::incr("post:{$this->id}:likes_count");
+        $key = "post:{$this->id}:likes_count";
+        Redis::incr($key);
+        Redis::expire($key, self::CACHE_TTL);
         $this->increment('likes_count');
     }
 
     /**
      * Decrement the Redis likes count (and database for persistence).
+     * Also refreshes the cache TTL.
      */
     public function decrementLikesCount()
     {
-        \Illuminate\Support\Facades\Redis::decr("post:{$this->id}:likes_count");
+        $key = "post:{$this->id}:likes_count";
+        Redis::decr($key);
+        Redis::expire($key, self::CACHE_TTL);
         $this->decrement('likes_count');
     }
 
     /**
      * Increment the Redis comments count (and database for persistence).
+     * Also refreshes the cache TTL.
      */
     public function incrementCommentsCount()
     {
-        \Illuminate\Support\Facades\Redis::incr("post:{$this->id}:comments_count");
+        $key = "post:{$this->id}:comments_count";
+        Redis::incr($key);
+        Redis::expire($key, self::CACHE_TTL);
         $this->increment('comments_count');
     }
 
     /**
      * Decrement the Redis comments count (and database for persistence).
+     * Also refreshes the cache TTL.
      */
     public function decrementCommentsCount()
     {
-        \Illuminate\Support\Facades\Redis::decr("post:{$this->id}:comments_count");
+        $key = "post:{$this->id}:comments_count";
+        Redis::decr($key);
+        Redis::expire($key, self::CACHE_TTL);
         $this->decrement('comments_count');
     }
 }
+

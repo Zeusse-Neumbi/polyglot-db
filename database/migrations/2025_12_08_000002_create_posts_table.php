@@ -3,7 +3,6 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\DB;
 
 return new class extends Migration {
     protected $connection = 'mongodb';
@@ -15,7 +14,11 @@ return new class extends Migration {
     {
         Schema::connection('mongodb')->create('posts', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id')->index(); 
+            $table->id();
+            // Polymorphic author: User or Page
+            $table->unsignedBigInteger('author_id')->index();
+            $table->string('author_type');
+
             $table->text('content')->nullable();
             $table->string('media_url', 512)->nullable();
             $table->enum('media_type', ['image', 'video', 'audio', 'link', 'none'])->default('none');
@@ -25,7 +28,7 @@ return new class extends Migration {
             $table->timestamps();
             $table->softDeletes();
 
-            $table->index(['user_id', 'created_at'], 'idx_post_user_created');
+            $table->index(['author_id', 'author_type', 'created_at'], 'idx_post_author_created');
             $table->index('created_at', 'idx_post_created');
             $table->index(['content' => 'text'], 'ft_posts_content');
         });

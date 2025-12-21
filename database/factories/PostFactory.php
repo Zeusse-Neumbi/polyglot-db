@@ -13,7 +13,8 @@ class PostFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),
+            'author_id' => User::factory(),
+            'author_type' => User::class,
             'content' => fake()->paragraph(),
             'media_url' => fake()->imageUrl(),
             'media_type' => fake()->randomElement(['image', 'video', 'none']),

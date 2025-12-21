@@ -30,4 +30,9 @@ class Page extends Model
         return $this->belongsToMany(User::class, 'page_followers')
             ->withPivot('notifications_on', 'followed_at');
     }
+
+    public function posts()
+    {
+        return $this->morphMany(Post::class, 'author');
+    }
 }

@@ -22,7 +22,7 @@ return new class extends Migration {
             $table->unsignedBigInteger('conversation_id');
             $table->unsignedBigInteger('user_id');
             $table->dateTime('joined_at')->useCurrent();
-            $table->enum('role', ['member', 'admin'])->default('member');
+            $table->enum('role', ['member', 'admin', 'moderator'])->default('member');
 
             $table->primary(['conversation_id', 'user_id']);
             $table->foreign('conversation_id')->references('id')->on('conversations')->onDelete('cascade');

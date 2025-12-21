@@ -29,7 +29,7 @@ class UserFactory extends Factory
             'password' => static::$password ??= Hash::make('password'),
             'nom' => fake()->lastName(),
             'prenom' => fake()->firstName(),
-            'date_naissance' => fake()->date(),
+            'date_naissance' => fake()->dateTimeBetween('-80 years', '-13 years')->format('Y-m-d'),
             'genre' => fake()->randomElement(['homme', 'femme', 'autre']),
             'bio' => fake()->sentence(),
             'profile_photo' => fake()->imageUrl(),

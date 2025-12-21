@@ -16,9 +16,43 @@ class MessageFactory extends Factory
         return [
             'conversation_id' => Conversation::factory(),
             'sender_id' => User::factory(),
-            'content' => fake()->sentence(),
-            'type' => fake()->randomElement(['text', 'image', 'video']),
-            'read_at' => fake()->boolean() ? now() : null,
+            'body' => fake()->sentence(),
+            'attachments' => fake()->boolean(20) ? [
+                ['type' => 'image', 'url' => fake()->imageUrl()]
+            ] : null,
+            'is_read' => fake()->boolean(),
         ];
+    }
+
+    /**
+     * Indicate that the message is unread.
+     */
+    public function unread(): static
+    {
+        return $this->state(fn(array $attributes) => [
+            'is_read' => false,
+        ]);
+    }
+
+    /**
+     * Indicate that the message has been read.
+     */
+    public function read(): static
+    {
+        return $this->state(fn(array $attributes) => [
+            'is_read' => true,
+        ]);
+    }
+
+    /**
+     * Indicate that the message has an attachment.
+     */
+    public function withAttachment(): static
+    {
+        return $this->state(fn(array $attributes) => [
+            'attachments' => [
+                ['type' => fake()->randomElement(['image', 'video', 'file']), 'url' => fake()->url()]
+            ],
+        ]);
     }
 }

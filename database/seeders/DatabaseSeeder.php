@@ -2,19 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\Comment;
-use App\Models\Conversation;
-use App\Models\Friend;
-use App\Models\Group;
-use App\Models\Message;
-use App\Models\Notification;
-use App\Models\Page;
-use App\Models\Post;
-use App\Models\Reaction;
-use App\Models\SessionAudit;
-use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Log;
 
 class DatabaseSeeder extends Seeder
 {
@@ -23,136 +11,158 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Create Users
-        $this->command->info('Creating Users...');
-        $admin = User::factory()->create([
-            'username' => 'admin',
-            'email' => 'admin@example.com',
-            'password' => bcrypt('password'),
-            'is_active' => true,
+        $this->command->info('🚀 Starting Social Network Data Seeder');
+
+        // Check for existing checkpoint
+        $checkpoint = \Database\Seeders\Helpers\SeedingCheckpoint::class;
+        if ($checkpoint::exists()) {
+            $info = $checkpoint::getInfo();
+            $this->command->warn("⚠️  {$info}");
+            if ($this->command->confirm('Do you want to resume from this checkpoint?', true)) {
+                // Resume logic would be handled by individual seeders
+                $this->command->info('Resuming from checkpoint...');
+            } else {
+                $checkpoint::clear();
+                $this->command->info('Checkpoint cleared. Starting fresh.');
+            }
+        }
+
+        // 1. Choose Scale
+        $scale = $this->chooseScale();
+        $config = new \Database\Seeders\Helpers\SeedingConfig($scale);
+        $timeSim = new \Database\Seeders\Helpers\TimeSimulator();
+
+        $this->command->info("📊 Configuration: {$config->getScaleLabel()}");
+        $this->command->info("👥 Target Users: " . number_format($config->getUserCount()));
+        $this->command->info("📅 Historical Data: 5 Years ({$timeSim->getStartDate()->toDateString()} to Now)");
+
+        if (!$this->command->confirm('Do you want to proceed?', true)) {
+            $this->command->warn('Seeding aborted.');
+            return;
+        }
+
+        $this->command->newLine();
+        $startTime = microtime(true);
+
+        // ========== PERFORMANCE OPTIMIZATIONS ==========
+        $this->command->info('⚡ Enabling performance optimizations...');
+
+        // 1. Disable query logging (saves memory)
+        \Illuminate\Support\Facades\DB::disableQueryLog();
+
+        // 2. Disable Eloquent events for all models during seeding
+        \Illuminate\Database\Eloquent\Model::unguard();
+
+        // 3. Pre-generate faker data pools for reuse
+        $this->generateFakerPools();
+
+        // Make config available to other seeders via Singleton
+        app()->instance(\Database\Seeders\Helpers\SeedingConfig::class, $config);
+        app()->instance(\Database\Seeders\Helpers\TimeSimulator::class, $timeSim);
+
+        $this->call([
+            UserSeeder::class,
+            GroupSeeder::class,
+            PageSeeder::class,
+            FriendSeeder::class,
+            PostSeeder::class,
+            ConversationSeeder::class,
+            NotificationSeeder::class,
         ]);
 
-        $users = User::factory(50)->create();
-        $users->push($admin);
+        // ========== RESTORE DEFAULTS ==========
+        \Illuminate\Database\Eloquent\Model::reguard();
 
-        // 2. Create Friendships
-        $this->command->info('Creating Friendships...');
-        foreach ($users as $user) {
-            $friends = $users->random(rand(2, 5))->except($user->id);
-            foreach ($friends as $friend) {
-                // Check if friendship already exists
-                $exists = Friend::where(function ($q) use ($user, $friend) {
-                    $q->where('user_id_1', $user->id)->where('user_id_2', $friend->id);
-                })->orWhere(function ($q) use ($user, $friend) {
-                    $q->where('user_id_1', $friend->id)->where('user_id_2', $user->id);
-                })->exists();
+        // Clear checkpoint on successful completion
+        $checkpoint::clear();
 
-                if (!$exists) {
-                    Friend::factory()->create([
-                        'user_id_1' => $user->id,
-                        'user_id_2' => $friend->id,
-                    ]);
-                }
-            }
+        $duration = round(microtime(true) - $startTime, 2);
+        $this->command->newLine();
+        $this->command->info("✅ Database seeding completed in {$duration}s!");
+    }
+
+    private function chooseScale(): string
+    {
+        // If passed as argument (future improvement), read it here.
+        // For now, interactive only.
+
+        $scales = \Database\Seeders\Helpers\SeedingConfig::getAvailableScales();
+        $options = [];
+        $keyMap = [];
+
+        foreach ($scales as $key => $details) {
+            $options[] = $details['label'];
+            $keyMap[] = $key; // map index to key
         }
 
-        // 3. Create Posts
-        $this->command->info('Creating Posts...');
-        $users->each(function ($user) {
-            Post::factory(rand(1, 5))->create([
-                'user_id' => $user->id,
-            ]);
-        });
+        $choiceIndex = array_search(
+            $this->command->choice('Select Seeding Scale', $options, 0),
+            $options
+        );
 
-        $posts = Post::all();
+        return $keyMap[$choiceIndex];
+    }
 
-        // 4. Create Comments & Reactions
-        $this->command->info('Creating Comments and Reactions...');
-        $posts->each(function ($post) use ($users) {
-            // Reactions on Post
-            $reactors = $users->random(rand(0, 10));
-            foreach ($reactors as $reactor) {
-                if (Reaction::where('post_id', $post->id)->where('user_id', $reactor->id)->doesntExist()) {
-                    Reaction::factory()->create([
-                        'user_id' => $reactor->id,
-                        'post_id' => $post->id,
-                        'reaction_type' => fake()->randomElement(['like', 'love', 'haha']),
-                    ]);
-                }
-            }
-            $post->update(['likes_count' => $reactors->count()]);
+    /**
+     * Pre-generate pools of faker data to avoid repeated faker calls.
+     * This significantly speeds up seeding by reusing generated data.
+     */
+    private function generateFakerPools(): void
+    {
+        $poolSize = 1000;
 
-            // Comments on Post
-            $commenters = $users->random(rand(0, 5));
-            foreach ($commenters as $commenter) {
-                $comment = Comment::factory()->create([
-                    'post_id' => $post->id,
-                    'user_id' => $commenter->id,
-                ]);
-            }
+        // Store in a static class for access by all seeders
+        FakerPool::$sentences = array_map(fn() => fake()->sentence(), range(1, $poolSize));
+        FakerPool::$paragraphs = array_map(fn() => fake()->paragraph(), range(1, $poolSize));
+        FakerPool::$words = array_map(fn() => fake()->words(3, true), range(1, $poolSize));
+        FakerPool::$names = array_map(fn() => fake()->name(), range(1, $poolSize));
+        FakerPool::$emails = array_map(fn() => fake()->unique()->safeEmail(), range(1, $poolSize));
+        FakerPool::$imageUrls = array_map(fn() => fake()->imageUrl(640, 480), range(1, 200));
+        FakerPool::$reactions = ['like', 'like', 'like', 'love', 'haha', 'wow', 'sad', 'angry'];
+        FakerPool::$shortMessages = ['ok', 'lol', '👍', '😂', 'nice!', 'cool', 'thanks!', '❤️', 'wow', 'haha', 'yes', 'no', '🔥', '👏'];
 
-            $post->update(['comments_count' => $commenters->count()]);
-        });
-
-        // 5. Create Groups
-        $this->command->info('Creating Groups...');
-        $groups = Group::factory(10)->create();
-        $groups->each(function ($group) use ($users) {
-            $members = $users->random(rand(5, 20)); // Ensure we pick valid IDs
-            foreach ($members as $member) {
-                $group->users()->attach($member->id, [
-                    'role' => fake()->randomElement(['member', 'moderator', 'admin']),
-                    'joined_at' => now(),
-                ]);
-            }
-        });
-
-        // 6. Create Pages
-        $this->command->info('Creating Pages...');
-        $pages = Page::factory(8)->create();
-        $pages->each(function ($page) use ($users) {
-            $followers = $users->random(rand(5, 20));
-            foreach ($followers as $follower) {
-                $page->followers()->attach($follower->id, [
-                    'notifications_on' => fake()->boolean(),
-                    'followed_at' => now(),
-                ]);
-            }
-        });
-
-        // 7. Create Conversations & Messages
-        $this->command->info('Creating Conversations...');
-        // Private conversations
-        for ($i = 0; $i < 20; $i++) {
-            $participants = $users->random(2);
-            $conversation = Conversation::factory()->create(['type' => 'private']);
-            $conversation->users()->attach($participants->pluck('id'), ['joined_at' => now()]);
-
-            Message::factory(rand(5, 20))->create([
-                'conversation_id' => $conversation->id,
-                'sender_id' => $participants->random()->id,
-            ]);
-        }
-
-        // Group conversations
-        for ($i = 0; $i < 5; $i++) {
-            $participants = $users->random(rand(3, 8));
-            $conversation = Conversation::factory()->create(['type' => 'group']);
-            $conversation->users()->attach($participants->pluck('id'), ['joined_at' => now()]);
-
-            Message::factory(rand(10, 50))->create([
-                'conversation_id' => $conversation->id,
-                'sender_id' => $participants->random()->id,
-            ]);
-        }
-
-        // 8. Notifications & Session Audits
-        $this->command->info('Creating Notifications...');
-        $users->each(function ($user) {
-            Notification::factory(rand(0, 10))->create(['user_id' => $user->id]);
-            SessionAudit::factory(rand(1, 5))->create(['user_id' => $user->id]);
-        });
-
-        $this->command->info('Database initialization completed successfully.');
+        $this->command->info('  ✓ Pre-generated ' . ($poolSize * 5) . ' faker data items');
     }
 }
+
+/**
+ * Static class to hold pre-generated faker data pools.
+ * Accessible from any seeder for fast random data selection.
+ */
+class FakerPool
+{
+    public static array $sentences = [];
+    public static array $paragraphs = [];
+    public static array $words = [];
+    public static array $names = [];
+    public static array $emails = [];
+    public static array $imageUrls = [];
+    public static array $reactions = [];
+    public static array $shortMessages = [];
+
+    public static function randomSentence(): string
+    {
+        return self::$sentences[array_rand(self::$sentences)] ?? fake()->sentence();
+    }
+
+    public static function randomParagraph(): string
+    {
+        return self::$paragraphs[array_rand(self::$paragraphs)] ?? fake()->paragraph();
+    }
+
+    public static function randomImageUrl(): string
+    {
+        return self::$imageUrls[array_rand(self::$imageUrls)] ?? fake()->imageUrl();
+    }
+
+    public static function randomReaction(): string
+    {
+        return self::$reactions[array_rand(self::$reactions)];
+    }
+
+    public static function randomShortMessage(): string
+    {
+        return self::$shortMessages[array_rand(self::$shortMessages)];
+    }
+}
+

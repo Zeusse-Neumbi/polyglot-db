@@ -1,144 +1,106 @@
--- ------------------------------------------------------------
--- Configuration recommandée pre-DDL (exécutée par l'admin si besoin)
--- (Non-exécuter si tu n'as pas les droits ou si tu veux garder defaults)
--- ------------------------------------------------------------
--- SET GLOBAL innodb_file_per_table = ON;
--- SET GLOBAL innodb_buffer_pool_size = 8G; -- adapter selon RAM
--- SET GLOBAL max_connections = 500;
--- SET GLOBAL innodb_flush_log_at_trx_commit = 2; -- pour perf (perdre 1s possible)
--- ------------------------------------------------------------
+-- ============================================================
+-- SCHEMA DOCUMENTATION: TP_BD - Social Network Application
+-- ============================================================
+-- Architecture: Hybrid Database (MariaDB + MongoDB + Redis)
+-- Updated: 2025-12-19
+-- ============================================================
+--
+-- DATABASE LAYOUT:
+--   MariaDB:  users, sessions, password_reset_tokens, friends,
+--             conversations, conversation_user, groups, group_user,
+--             pages, page_followers, cache, cache_locks, jobs, etc.
+--   MongoDB:  posts, comments, reactions, messages, notifications,
+--             sessions_audit
+--   Redis:    Post counters cache (likes_count, comments_count)
+--
+-- ============================================================
+
+-- ============================================================
+--                      MARIADB TABLES
+-- ============================================================
 
 -- ------------------------------------------------------------
--- TABLE users (complet + index recherche)
+-- TABLE users
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(150) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    nom VARCHAR(100),
-    prenom VARCHAR(100),
-    date_naissance DATE,
+    nom VARCHAR(100) NULL,
+    prenom VARCHAR(100) NULL,
+    date_naissance DATE NULL,
     genre ENUM('homme', 'femme', 'autre') DEFAULT 'autre',
-    bio TEXT,
-    profile_photo VARCHAR(255),
-    cover_photo VARCHAR(255),
+    bio TEXT NULL,
+    profile_photo VARCHAR(255) NULL,
+    cover_photo VARCHAR(255) NULL,
     is_active TINYINT(1) DEFAULT 1,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deleted_at DATETIME NULL,
+    remember_token VARCHAR(100) NULL,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
     INDEX idx_users_created_at (created_at),
     FULLTEXT KEY ft_users_name (nom, prenom, username)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- TABLE publications (posts) : partitionnée par HASH(user_id)
+-- TABLE password_reset_tokens
 -- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS publications (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    user_id BIGINT UNSIGNED NOT NULL,
-    content TEXT,
-    media_url VARCHAR(512) NULL,
-    media_type ENUM(
-        'image',
-        'video',
-        'audio',
-        'link',
-        'none'
-    ) DEFAULT 'none',
-    visibility ENUM(
-        'public',
-        'friends',
-        'private'
-    ) DEFAULT 'public',
-    likes_count BIGINT UNSIGNED NOT NULL DEFAULT 0,
-    comments_count BIGINT UNSIGNED NOT NULL DEFAULT 0,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deleted_at DATETIME NULL,
-    PRIMARY KEY (id, user_id), -- user_id included for partitioning and some engines
-    KEY idx_pub_user_created (user_id, created_at),
-    KEY idx_pub_created (created_at),
-    FULLTEXT KEY ft_publications_content (content),
-    CONSTRAINT fk_pub_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
--- ajuster nombre partitions
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    email VARCHAR(255) NOT NULL PRIMARY KEY,
+    token VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- TABLE commentaires : partitionnée sur publication_id via HASH
+-- TABLE sessions (Laravel session storage)
 -- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS commentaires (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    publication_id BIGINT UNSIGNED NOT NULL,
-    user_id BIGINT UNSIGNED NOT NULL,
-    content TEXT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deleted_at DATETIME NULL,
-    PRIMARY KEY (id, publication_id),
-    KEY idx_comment_pub_created (publication_id, created_at),
-    CONSTRAINT fk_comment_pub FOREIGN KEY (publication_id) REFERENCES publications (id) ON DELETE CASCADE,
-    CONSTRAINT fk_comment_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+CREATE TABLE IF NOT EXISTS sessions (
+    id VARCHAR(255) NOT NULL PRIMARY KEY,
+    user_id BIGINT UNSIGNED NULL,
+    ip_address VARCHAR(45) NULL,
+    user_agent TEXT NULL,
+    payload LONGTEXT NOT NULL,
+    last_activity INT NOT NULL,
+    INDEX idx_sessions_user_id (user_id),
+    INDEX idx_sessions_last_activity (last_activity)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- TABLE reactions (likes / réactions)
+-- TABLE friends (composite primary key)
 -- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS reactions (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    publication_id BIGINT UNSIGNED NOT NULL,
-    user_id BIGINT UNSIGNED NOT NULL,
-    reaction_type ENUM(
-        'like',
-        'love',
-        'haha',
-        'wow',
-        'sad',
-        'angry'
-    ) NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id, publication_id),
-    UNIQUE KEY ux_reaction_pub_user (publication_id, user_id),
-    KEY idx_reaction_pub (publication_id),
-    KEY idx_reaction_user (user_id),
-    CONSTRAINT fk_reaction_pub FOREIGN KEY (publication_id) REFERENCES publications (id) ON DELETE CASCADE,
-    CONSTRAINT fk_reaction_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
-
--- ------------------------------------------------------------
--- TABLE amis (friendships)
--- Use canonical ordering to avoid duplicate pairs (user_a < user_b)
--- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS amis (
-    user_a BIGINT UNSIGNED NOT NULL,
-    user_b BIGINT UNSIGNED NOT NULL,
+CREATE TABLE IF NOT EXISTS friends (
+    user_id_1 BIGINT UNSIGNED NOT NULL,
+    user_id_2 BIGINT UNSIGNED NOT NULL,
     status ENUM(
         'pending',
         'accepted',
         'rejected',
         'blocked'
-    ) NOT NULL DEFAULT 'pending',
+    ) DEFAULT 'pending',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     accepted_at DATETIME NULL,
-    PRIMARY KEY (user_a, user_b),
-    CHECK (user_a <> user_b),
-    CONSTRAINT fk_amis_a FOREIGN KEY (user_a) REFERENCES users (id) ON DELETE CASCADE,
-    CONSTRAINT fk_amis_b FOREIGN KEY (user_b) REFERENCES users (id) ON DELETE CASCADE,
-    INDEX idx_amis_user_a (user_a),
-    INDEX idx_amis_user_b (user_b)
+    PRIMARY KEY (user_id_1, user_id_2),
+    CONSTRAINT fk_friends_user_1 FOREIGN KEY (user_id_1) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_friends_user_2 FOREIGN KEY (user_id_2) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT check_users_diff CHECK (user_id_1 <> user_id_2),
+    INDEX idx_friends_user_1 (user_id_1),
+    INDEX idx_friends_user_2 (user_id_2)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- TABLE conversations & messages (messagerie)
--- partition messages by conversation_id
+-- TABLE conversations
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS conversations (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     type ENUM('private', 'group') DEFAULT 'private',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+-- ------------------------------------------------------------
+-- TABLE conversation_user (pivot)
+-- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS conversation_user (
     conversation_id BIGINT UNSIGNED NOT NULL,
     user_id BIGINT UNSIGNED NOT NULL,
@@ -149,36 +111,25 @@ CREATE TABLE IF NOT EXISTS conversation_user (
     CONSTRAINT fk_conv_user_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS messages (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    conversation_id BIGINT UNSIGNED NOT NULL,
-    sender_id BIGINT UNSIGNED NOT NULL,
-    body TEXT,
-    attachments JSON NULL,
-    is_read TINYINT(1) DEFAULT 0,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id, conversation_id),
-    KEY idx_messages_conv_created (conversation_id, created_at),
-    CONSTRAINT fk_msg_conv FOREIGN KEY (conversation_id) REFERENCES conversations (id) ON DELETE CASCADE,
-    CONSTRAINT fk_msg_sender FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
-
 -- ------------------------------------------------------------
--- TABLE groupes & pivot groupe_user
+-- TABLE groups
 -- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS groupes (
+CREATE TABLE IF NOT EXISTS groups (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     owner_id BIGINT UNSIGNED NULL,
     name VARCHAR(255) NOT NULL,
-    description TEXT,
-    avatar VARCHAR(255),
+    description TEXT NULL,
+    avatar VARCHAR(255) NULL,
     visibility ENUM('public', 'private') DEFAULT 'public',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_group_owner FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE SET NULL
+    CONSTRAINT fk_groups_owner FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE SET NULL
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS groupe_user (
-    groupe_id BIGINT UNSIGNED NOT NULL,
+-- ------------------------------------------------------------
+-- TABLE group_user (pivot)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS group_user (
+    group_id BIGINT UNSIGNED NOT NULL,
     user_id BIGINT UNSIGNED NOT NULL,
     role ENUM(
         'member',
@@ -186,25 +137,28 @@ CREATE TABLE IF NOT EXISTS groupe_user (
         'admin'
     ) DEFAULT 'member',
     joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (groupe_id, user_id),
-    CONSTRAINT fk_gu_group FOREIGN KEY (groupe_id) REFERENCES groupes (id) ON DELETE CASCADE,
+    PRIMARY KEY (group_id, user_id),
+    CONSTRAINT fk_gu_group FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE,
     CONSTRAINT fk_gu_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- TABLE pages & abonnement_page
+-- TABLE pages
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pages (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    description TEXT,
-    category VARCHAR(100),
-    avatar VARCHAR(255),
-    owner_id BIGINT UNSIGNED,
+    description TEXT NULL,
+    category VARCHAR(100) NULL,
+    avatar VARCHAR(255) NULL,
+    owner_id BIGINT UNSIGNED NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_page_owner FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE SET NULL
+    CONSTRAINT fk_pages_owner FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+-- ------------------------------------------------------------
+-- TABLE page_followers (pivot)
+-- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS page_followers (
     page_id BIGINT UNSIGNED NOT NULL,
     user_id BIGINT UNSIGNED NOT NULL,
@@ -216,72 +170,199 @@ CREATE TABLE IF NOT EXISTS page_followers (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- TABLE notifications (persistantes)
+-- TABLE cache (Laravel cache)
 -- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS notifications (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT UNSIGNED NOT NULL, -- destinataire
-    type VARCHAR(50) NOT NULL,
-    actor_user_id BIGINT UNSIGNED NULL, -- qui a déclenché l'action
-    object_type VARCHAR(50) NULL, -- 'publication','commentaire','user', ...
-    object_id BIGINT UNSIGNED NULL,
-    data JSON NULL,
-    is_read TINYINT(1) DEFAULT 0,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_notification_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS cache (
+    `key` VARCHAR(255) NOT NULL PRIMARY KEY,
+    value MEDIUMTEXT NOT NULL,
+    expiration INT NOT NULL
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- TABLE sessions (audit)
+-- TABLE cache_locks (Laravel cache locks)
 -- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS sessions_audit (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT UNSIGNED NULL,
-    session_token VARCHAR(255),
-    ip_address VARCHAR(45),
-    device VARCHAR(255),
-    user_agent VARCHAR(1024),
-    login_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    logout_at DATETIME NULL
+CREATE TABLE IF NOT EXISTS cache_locks (
+    `key` VARCHAR(255) NOT NULL PRIMARY KEY,
+    owner VARCHAR(255) NOT NULL,
+    expiration INT NOT NULL
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+-- ============================================================
+--                     MONGODB COLLECTIONS
+-- ============================================================
+-- The following collections are stored in MongoDB (database: social_network_data)
+-- They are documented here as pseudo-SQL for reference.
+-- Actual schema is managed via Laravel migrations with mongodb connection.
+-- ============================================================
+
 -- ------------------------------------------------------------
--- TRIGGERS : maintenir counts likes_count & comments_count
--- Note : utiliser avec précaution ; sur forte charge, préférer Redis
+-- COLLECTION posts (MongoDB)
+-- Relationship: user_id -> users.id (MariaDB, cross-database)
 -- ------------------------------------------------------------
+/*
+{
+_id: ObjectId,
+user_id: Number,                    -- FK to users.id (MariaDB)
+content: String | null,
+media_url: String | null,
+media_type: "image"|"video"|"audio"|"link"|"none",
+visibility: "public"|"friends"|"private",
+likes_count: Number,                -- Cached, also in Redis
+comments_count: Number,             -- Cached, also in Redis
+created_at: ISODate,
+updated_at: ISODate,
+deleted_at: ISODate | null
+}
+Indexes:
+- idx_post_user_created (user_id, created_at)
+- idx_post_created (created_at)
+- ft_posts_content (content: text)
+*/
 
-DELIMITER $$
+-- ------------------------------------------------------------
+-- COLLECTION comments (MongoDB)
+-- Relationships:
+--   post_id -> posts._id (MongoDB)
+--   user_id -> users.id (MariaDB, cross-database)
+-- ------------------------------------------------------------
+/*
+{
+_id: ObjectId,
+post_id: ObjectId,                  -- FK to posts._id
+user_id: Number,                    -- FK to users.id (MariaDB)
+content: String,
+created_at: ISODate,
+updated_at: ISODate,
+deleted_at: ISODate | null
+}
+Indexes:
+- idx_comment_post_created (post_id, created_at)
+*/
 
--- On incrémente likes_count après insertion d'une réaction
-CREATE TRIGGER IF NOT EXISTS trg_reaction_after_insert
-AFTER INSERT ON reactions
-FOR EACH ROW
-BEGIN
-    UPDATE publications SET likes_count = likes_count + 1 WHERE id = NEW.publication_id;
-END$$
+-- ------------------------------------------------------------
+-- COLLECTION reactions (MongoDB)
+-- Relationships:
+--   post_id -> posts._id (MongoDB, nullable)
+--   message_id -> messages._id (MongoDB, nullable)
+--   user_id -> users.id (MariaDB, cross-database)
+-- ------------------------------------------------------------
+/*
+{
+_id: ObjectId,
+post_id: ObjectId | null,           -- FK to posts._id
+user_id: Number,                    -- FK to users.id (MariaDB)
+message_id: ObjectId | null,        -- FK to messages._id
+reaction_type: "like"|"love"|"haha"|"wow"|"sad"|"angry",
+created_at: ISODate,
+updated_at: ISODate
+}
+Indexes:
+- ux_reaction_post_user (post_id, user_id) UNIQUE
+- idx_reaction_post (post_id)
+- idx_reaction_user (user_id)
+- idx_reaction_message (message_id)
+*/
 
--- On décrémente likes_count après suppression d'une réaction
-CREATE TRIGGER IF NOT EXISTS trg_reaction_after_delete
-AFTER DELETE ON reactions
-FOR EACH ROW
-BEGIN
-    UPDATE publications SET likes_count = GREATEST(likes_count - 1, 0) WHERE id = OLD.publication_id;
-END$$
+-- ------------------------------------------------------------
+-- COLLECTION messages (MongoDB)
+-- Relationships:
+--   conversation_id -> conversations.id (MariaDB, cross-database)
+--   sender_id -> users.id (MariaDB, cross-database)
+-- ------------------------------------------------------------
+/*
+{
+_id: ObjectId,
+conversation_id: Number,            -- FK to conversations.id (MariaDB)
+sender_id: Number,                  -- FK to users.id (MariaDB)
+body: String | null,
+attachments: Array | null,          -- JSON: [{type: "image", url: "..."}]
+is_read: Boolean,
+created_at: ISODate,
+updated_at: ISODate
+}
+Indexes:
+- idx_messages_conv_created (conversation_id, created_at)
+*/
 
--- On incrémente comments_count après insertion d'un commentaire
-CREATE TRIGGER IF NOT EXISTS trg_comment_after_insert
-AFTER INSERT ON commentaires
-FOR EACH ROW
-BEGIN
-    UPDATE publications SET comments_count = comments_count + 1 WHERE id = NEW.publication_id;
-END$$
+-- ------------------------------------------------------------
+-- COLLECTION notifications (MongoDB)
+-- Relationships:
+--   user_id -> users.id (MariaDB, cross-database)
+--   actor_user_id -> users.id (MariaDB, cross-database)
+-- ------------------------------------------------------------
+/*
+{
+_id: ObjectId,
+user_id: Number,                    -- FK to users.id (MariaDB)
+type: String,                       -- e.g. "like", "comment", "friend_request"
+actor_user_id: Number | null,       -- Who triggered the notification
+object_type: String | null,         -- e.g. "post", "comment", "user"
+object_id: Number | null,
+data: Object | null,                -- Additional JSON data
+is_read: Boolean,
+created_at: ISODate
+}
+*/
 
--- On décrémente comments_count après suppression d'un commentaire
-CREATE TRIGGER IF NOT EXISTS trg_comment_after_delete
-AFTER DELETE ON commentaires
-FOR EACH ROW
-BEGIN
-    UPDATE publications SET comments_count = GREATEST(comments_count - 1, 0) WHERE id = OLD.publication_id;
-END$$
+-- ------------------------------------------------------------
+-- COLLECTION sessions_audit (MongoDB)
+-- Relationships:
+--   user_id -> users.id (MariaDB, cross-database)
+-- ------------------------------------------------------------
+/*
+{
+_id: ObjectId,
+user_id: Number | null,             -- FK to users.id (MariaDB)
+session_token: String | null,
+ip_address: String | null,
+device: String | null,
+user_agent: String | null,
+login_at: ISODate,
+logout_at: ISODate | null
+}
+*/
 
-DELIMITER;
+-- ============================================================
+--                      REDIS CACHE KEYS
+-- ============================================================
+-- Redis is used for caching frequently accessed counters.
+-- TTL: 3600 seconds (1 hour)
+-- ============================================================
+/*
+Key patterns:
+post:{id}:likes_count     -- Cached likes count for a post
+post:{id}:comments_count  -- Cached comments count for a post
+
+Operations handled by App\Models\Post:
+- getCachedLikesCountAttribute()
+- getCachedCommentsCountAttribute()
+- incrementLikesCount() / decrementLikesCount()
+- incrementCommentsCount() / decrementCommentsCount()
+*/
+
+-- ============================================================
+--                      NOTES
+-- ============================================================
+--
+-- 1. TRIGGERS REMOVED: The original schema had triggers for maintaining
+--    likes_count and comments_count. These are now handled by:
+--    - Eloquent model events (booted() in Comment.php, Reaction.php)
+--    - Redis caching (Post.php)
+--
+-- 2. NAMING CHANGES from original schema.sql:
+--    - publications -> posts (MongoDB)
+--    - commentaires -> comments (MongoDB)
+--    - amis -> friends (MariaDB)
+--    - groupes -> groups (MariaDB)
+--    - groupe_user -> group_user (MariaDB)
+--
+-- 3. HYBRID RELATIONSHIPS:
+--    - MongoDB models use HybridRelations trait for cross-DB queries
+--    - User model (MariaDB) can access posts, comments (MongoDB)
+--    - Post model (MongoDB) can access user (MariaDB)
+--
+-- 4. CUSTOM ARTISAN COMMAND:
+--    php artisan migrate:fresh-all
+--    Drops both MariaDB tables AND MongoDB collections before migrating.
+--
+-- ============================================================

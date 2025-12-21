@@ -1,59 +1,161 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# TP_BD — Polyglot Database Research Project
 
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  <strong>📊 Comparative Study: Polyglot vs Single Database Architecture</strong><br>
+  <em>Academic Research Project — Database Performance Analysis</em>
 </p>
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🎯 Research Objective
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+This project is an **academic research** to compare and analyze the performance differences between:
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+| Architecture | Description |
+|--------------|-------------|
+| **Polyglot DB** | Hybrid system using MariaDB + MongoDB + Redis |
+| **Simple DB** | Traditional single relational database (MariaDB only) |
 
-## Learning Laravel
+The goal is to **monitor database traffic** and measure efficiency to demonstrate when and why polyglot architectures outperform (or underperform) simple database solutions.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+---
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## 🏗️ Research Approach
 
-## Laravel Sponsors
+### Hypothesis
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+A polyglot database architecture provides better performance for complex social network workloads by leveraging:
+- **MariaDB** — Structured, relational data (users, relationships)
+- **MongoDB** — Flexible, document-based data (feeds, activity logs)
+- **Redis** — High-speed caching (sessions, real-time counters)
 
-### Premium Partners
+### Methodology
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+1. **Build identical schema** on both architectures
+2. **Seed with realistic data** (users, posts, comments, reactions, etc.)
+3. **Run workload benchmarks** (read-heavy, write-heavy, mixed)
+4. **Monitor & measure** query latency, throughput, resource usage
+5. **Analyze results** to compare efficiency
 
-## Contributing
+---
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## ✅ What's Done
 
-## Code of Conduct
+### Database Schema
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+- [x] Complete SQL schema design (`database/schema.sql`)
+- [x] 12+ tables: users, publications, comments, reactions, friends, conversations, messages, groups, pages, notifications, sessions_audit
+- [x] Indexes and foreign keys for relational integrity
+- [x] Triggers for automatic count updates (`likes_count`, `comments_count`)
 
-## Security Vulnerabilities
+### Laravel Implementation
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- [x] 13 migrations for all tables
+- [x] 14 Eloquent models with relationships
+- [x] 11 factories for realistic test data
+- [x] 8 modular seeders (Users → Friends → Posts → Groups → Pages → Conversations → Notifications)
+- [x] Hybrid relations support (`HybridRelations` trait for MongoDB)
 
-## License
+### Multi-DB Configuration
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+- [x] MariaDB connection configured
+- [x] MongoDB connection configured
+- [x] Redis connection configured
+
+---
+
+## 📋 TODO — Remaining Tasks
+
+### 🔬 Benchmark Setup
+
+- [ ] Create **simple DB version** (MariaDB only, no MongoDB/Redis)
+- [ ] Design **benchmark workloads** (CRUD operations, feeds, searches)
+- [ ] Implement **load testing scripts** (concurrent users simulation)
+
+### 📈 Monitoring & Metrics
+
+- [ ] Set up **query logging** for both architectures
+- [ ] Implement **traffic monitoring** (queries/second, latency)
+- [ ] Track **resource usage** (CPU, memory, I/O)
+- [ ] Configure **profiling tools** (MySQL slow query log, MongoDB profiler)
+
+### 📊 Data Collection
+
+- [ ] Define **metrics to capture**:
+  - Query execution time (avg, p95, p99)
+  - Throughput (queries/second)
+  - Connection pool usage
+  - Cache hit/miss ratio (Redis)
+  - Read vs write latency
+- [ ] Create **data collection scripts**
+- [ ] Build **results database/spreadsheet**
+
+### 🧪 Experiments to Run
+
+- [ ] **Experiment 1**: Read-heavy (90% reads / 10% writes)
+- [ ] **Experiment 2**: Write-heavy (30% reads / 70% writes)
+- [ ] **Experiment 3**: Mixed workload (50/50)
+- [ ] **Experiment 4**: Spike traffic simulation
+- [ ] **Experiment 5**: Large dataset (100K+ users, 1M+ posts)
+
+### 📝 Analysis & Report
+
+- [ ] Compile **benchmark results**
+- [ ] Create **comparison charts/graphs**
+- [ ] Write **research findings**
+- [ ] Prepare **conclusions & recommendations**
+
+---
+
+## 🛠️ Tech Stack
+
+| Component | Technology | Role |
+|-----------|------------|------|
+| Framework | Laravel 12 | Application layer |
+| Primary DB | MariaDB | Relational data |
+| Document Store | MongoDB | Flexible storage |
+| Cache | Redis | High-speed caching |
+| Language | PHP 8.2+ | Backend |
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# Install dependencies
+composer install
+
+# Configure environment
+cp .env.example .env
+php artisan key:generate
+
+# Run migrations
+php artisan migrate
+
+# Seed test data
+php artisan db:seed
+
+# Start server
+composer dev
+```
+
+---
+
+## 📂 Project Structure
+
+```
+TP_BD/
+├── app/Models/           # 14 Eloquent models
+├── database/
+│   ├── factories/        # 11 factories
+│   ├── migrations/       # 13 migrations
+│   ├── seeders/          # 8 seeders
+│   └── schema.sql        # Raw SQL schema
+└── config/database.php   # Multi-DB config
+```
+
+---
+
+## 📄 License
+
+MIT License — Academic Research Project

@@ -46,7 +46,7 @@ class User extends Authenticatable
     // Relationships
     public function posts()
     {
-        return $this->hasMany(Post::class);
+        return $this->morphMany(Post::class, 'author');
     }
 
     public function comments()

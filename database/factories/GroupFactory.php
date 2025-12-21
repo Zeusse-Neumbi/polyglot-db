@@ -16,6 +16,7 @@ class GroupFactory extends Factory
             'name' => fake()->company(),
             'description' => fake()->paragraph(),
             'visibility' => fake()->randomElement(['public', 'private']),
+            'avatar' => fake()->imageUrl(200, 200, 'abstract'),
             'owner_id' => User::factory(),
         ];
     }
