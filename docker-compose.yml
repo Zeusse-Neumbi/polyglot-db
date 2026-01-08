@@ -1,0 +1,222 @@
+services:
+  # ═══════════════════════════════════════════════════════════
+  # LOAD BALANCER - Nginx
+  # ═══════════════════════════════════════════════════════════
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./public:/var/www/html/public:ro
+    depends_on:
+      - app-1
+      - app-2
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════
+  # APPLICATION SERVERS (Horizontal Scaling)
+  # ═══════════════════════════════════════════════════════════
+  app-1:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    environment:
+      - APP_NAME=TP_BD
+      - APP_ENV=local
+      - CONTAINER_ROLE=app
+      - INSTANCE_ID=app-1
+    env_file:
+      - .env.docker
+    volumes:
+      - .:/var/www/html
+      - ./docker/app/php.ini:/usr/local/etc/php/conf.d/custom.ini
+    depends_on:
+      mariadb-primary:
+        condition: service_healthy
+      mongo-primary:
+        condition: service_started
+      redis-cache:
+        condition: service_started
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
+
+  app-2:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    environment:
+      - APP_NAME=TP_BD
+      - APP_ENV=local
+      - CONTAINER_ROLE=app
+      - INSTANCE_ID=app-2
+    env_file:
+      - .env.docker
+    volumes:
+      - .:/var/www/html
+      - ./docker/app/php.ini:/usr/local/etc/php/conf.d/custom.ini
+    depends_on:
+      mariadb-primary:
+        condition: service_healthy
+      mongo-primary:
+        condition: service_started
+      redis-cache:
+        condition: service_started
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════
+  # QUEUE WORKER (Background Jobs)
+  # ═══════════════════════════════════════════════════════════
+  queue-worker:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    command: php artisan queue:work redis --sleep=3 --tries=3 --max-jobs=1000
+    environment:
+      - CONTAINER_ROLE=queue
+    env_file:
+      - .env.docker
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - redis-queue
+      - mariadb-primary
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════
+  # MARIADB CLUSTER (Primary + Replica)
+  # ═══════════════════════════════════════════════════════════
+  mariadb-primary:
+    image: mariadb:10.11
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: tp_bd
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: secret
+    volumes:
+      - mariadb_primary_data:/var/lib/mysql
+      - ./docker/mariadb/primary.cnf:/etc/mysql/conf.d/primary.cnf
+      - ./docker/mariadb/init-primary.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3308:3306"
+    healthcheck:
+      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
+
+  mariadb-replica:
+    image: mariadb:10.11
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+    volumes:
+      - mariadb_replica_data:/var/lib/mysql
+      - ./docker/mariadb/replica.cnf:/etc/mysql/conf.d/replica.cnf
+    ports:
+      - "3309:3306"
+    depends_on:
+      mariadb-primary:
+        condition: service_healthy
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════
+  # MONGODB REPLICA SET (Primary + Secondary + Arbiter)
+  # ═══════════════════════════════════════════════════════════
+  mongo-primary:
+    image: mongo:7.0
+    command: mongod --replSet rs0 --bind_ip_all
+    volumes:
+      - mongo_primary_data:/data/db
+    ports:
+      - "27020:27017"
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
+
+  mongo-secondary:
+    image: mongo:7.0
+    command: mongod --replSet rs0 --bind_ip_all
+    volumes:
+      - mongo_secondary_data:/data/db
+    ports:
+      - "27021:27017"
+    depends_on:
+      - mongo-primary
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
+
+  mongo-arbiter:
+    image: mongo:7.0
+    command: mongod --replSet rs0 --bind_ip_all
+    ports:
+      - "27022:27017"
+    depends_on:
+      - mongo-primary
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════
+  # REDIS (Separated: Cache + Queue)
+  # ═══════════════════════════════════════════════════════════
+  redis-cache:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6381:6379"
+    volumes:
+      - redis_cache_data:/data
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
+
+  redis-queue:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "6382:6379"
+    volumes:
+      - redis_queue_data:/data
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════
+  # VISUALIZATION - Portainer
+  # ═══════════════════════════════════════════════════════════
+  portainer:
+    image: portainer/portainer-ce:latest
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks:
+      - tp_bd_network
+    restart: always
+
+networks:
+  tp_bd_network:
+    driver: bridge
+
+volumes:
+  mariadb_primary_data:
+  mariadb_replica_data:
+  mongo_primary_data:
+  mongo_secondary_data:
+  redis_cache_data:
+  redis_queue_data:
+  portainer_data:

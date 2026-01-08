@@ -1,0 +1,12 @@
+[mysqld]
+server-id = 2
+relay_log = relay-bin
+read_only = 1
+gtid_strict_mode = 1
+
+# Performance tuning
+innodb_buffer_pool_size = 256M
+max_connections = 200
+
+# Replica specific
+slave_parallel_threads = 4

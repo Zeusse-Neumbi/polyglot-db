@@ -65,8 +65,14 @@ return [
 
         'mariadb' => [
             'driver' => 'mariadb',
+            'read' => [
+                'host' => [env('DB_READ_HOST', '127.0.0.1')],
+            ],
+            'write' => [
+                'host' => [env('DB_WRITE_HOST', '127.0.0.1')],
+            ],
+            'sticky' => true,
             'url' => env('DB_URL'),
-            'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '3306'),
             'database' => env('DB_DATABASE', 'laravel'),
             'username' => env('DB_USERNAME', 'root'),
@@ -114,8 +120,8 @@ return [
         ],
 
         'mongodb' => [
-            // 'dsn' => env('DB_MONGO_DSN'),
             'driver' => 'mongodb',
+            'dsn' => env('MONGO_DSN'),
             'host' => env('DB_MONGO_HOST', '127.0.0.1'),
             'port' => env('DB_MONGO_PORT', 27017),
             'database' => env('DB_MONGO_DATABASE'),

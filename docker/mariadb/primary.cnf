@@ -1,0 +1,15 @@
+[mysqld]
+server-id = 1
+log_bin = mysql-bin
+binlog_format = ROW
+binlog_do_db = tp_bd
+gtid_strict_mode = 1
+
+# Performance tuning
+innodb_buffer_pool_size = 256M
+innodb_log_file_size = 64M
+max_connections = 200
+
+# Replication settings
+sync_binlog = 1
+innodb_flush_log_at_trx_commit = 1
