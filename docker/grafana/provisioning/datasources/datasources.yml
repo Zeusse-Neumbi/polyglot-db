@@ -1,0 +1,20 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+
+  - name: MariaDB
+    type: mysql
+    access: proxy
+    url: mariadb-primary:3306
+    user: laravel
+    database: tp_bd
+    secureJsonData:
+      password: secret
+    jsonData:
+      sslmode: "disable"

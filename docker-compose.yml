@@ -142,7 +142,9 @@ services:
     ports:
       - "27020:27017"
     networks:
-      - tp_bd_network
+      tp_bd_network:
+        aliases:
+          - mongo
     restart: unless-stopped
 
   mongo-secondary:
@@ -206,7 +208,144 @@ services:
       - portainer_data:/data
     networks:
       - tp_bd_network
-    restart: always
+  # ═══════════════════════════════════════════════════════════
+  # DATABASE ADMINISTRATION - Adminer + Mongo Express
+  # ═══════════════════════════════════════════════════════════
+  adminer:
+    image: adminer
+    ports:
+      - "8081:8080"
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
+
+  mongo-express:
+    image: mongo-express
+    ports:
+      - "8082:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=pass
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════
+  # SYSTEM MONITORING - cAdvisor + Node Exporter
+  # ═══════════════════════════════════════════════════════════
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
+    privileged: true
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/host/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/rootfs:ro
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════
+  # MONITORING - Prometheus + Grafana
+  # ═══════════════════════════════════════════════════════════
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    ports:
+      - "9099:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════
+  # EXPORTERS - Database Metrics
+  # ═══════════════════════════════════════════════════════════
+  mysqld-exporter:
+    image: prom/mysqld-exporter:v0.15.0
+    volumes:
+      - ./docker/prometheus/my.cnf:/.my.cnf:ro
+    ports:
+      - "9104:9104"
+    depends_on:
+      mariadb-primary:
+        condition: service_healthy
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
+
+  mongodb-exporter:
+    image: percona/mongodb_exporter:0.40
+    command:
+      - '--mongodb.uri=mongodb://mongo-primary:27017'
+      - '--collect-all'
+    ports:
+      - "9216:9216"
+    depends_on:
+      - mongo-primary
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    environment:
+      - REDIS_ADDR=redis-cache:6379
+    ports:
+      - "9121:9121"
+    depends_on:
+      - redis-cache
+    networks:
+      - tp_bd_network
+    restart: unless-stopped
 
 networks:
   tp_bd_network:
@@ -220,3 +359,5 @@ volumes:
   redis_cache_data:
   redis_queue_data:
   portainer_data:
+  prometheus_data:
+  grafana_data:

@@ -1,0 +1,172 @@
+{
+    "annotations": {
+        "list": []
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 0,
+    "id": null,
+    "links": [],
+    "liveNow": false,
+    "panels": [
+        {
+            "title": "Cluster Overview",
+            "type": "row",
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+            }
+        },
+        {
+            "title": "Running Containers",
+            "type": "stat",
+            "datasource": "Prometheus",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 0,
+                "y": 1
+            },
+            "targets": [
+                {
+                    "expr": "count(container_last_seen{name!=\"\"})",
+                    "legendFormat": "Containers"
+                }
+            ]
+        },
+        {
+            "title": "Total CPU Usage",
+            "type": "gauge",
+            "datasource": "Prometheus",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 6,
+                "y": 1
+            },
+            "targets": [
+                {
+                    "expr": "sum(rate(container_cpu_usage_seconds_total{name!=\"\"}[1m])) * 100",
+                    "legendFormat": "CPU %"
+                }
+            ]
+        },
+        {
+            "title": "Total Memory Usage",
+            "type": "gauge",
+            "datasource": "Prometheus",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 12,
+                "y": 1
+            },
+            "targets": [
+                {
+                    "expr": "sum(container_memory_usage_bytes{name!=\"\"})",
+                    "legendFormat": "Bytes"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "bytes"
+                }
+            }
+        },
+        {
+            "title": "Network Traffic (Aggregated)",
+            "type": "timeseries",
+            "datasource": "Prometheus",
+            "gridPos": {
+                "h": 8,
+                "w": 24,
+                "x": 0,
+                "y": 5
+            },
+            "targets": [
+                {
+                    "expr": "sum(rate(container_network_receive_bytes_total[1m]))",
+                    "legendFormat": "RX Total"
+                },
+                {
+                    "expr": "sum(rate(container_network_transmit_bytes_total[1m]))",
+                    "legendFormat": "TX Total"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "bps"
+                }
+            }
+        },
+        {
+            "title": "Container Details",
+            "type": "row",
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 13
+            }
+        },
+        {
+            "title": "CPU Usage per Container",
+            "type": "timeseries",
+            "datasource": "Prometheus",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 14
+            },
+            "targets": [
+                {
+                    "expr": "rate(container_cpu_usage_seconds_total{name!=\"\"}[1m])",
+                    "legendFormat": "{{name}}"
+                }
+            ]
+        },
+        {
+            "title": "Memory Usage per Container",
+            "type": "timeseries",
+            "datasource": "Prometheus",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 14
+            },
+            "targets": [
+                {
+                    "expr": "container_memory_usage_bytes{name!=\"\"}",
+                    "legendFormat": "{{name}}"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "bytes"
+                }
+            }
+        }
+    ],
+    "refresh": "5s",
+    "schemaVersion": 38,
+    "style": "dark",
+    "tags": [
+        "docker",
+        "containers"
+    ],
+    "templating": {
+        "list": []
+    },
+    "time": {
+        "from": "now-15m",
+        "to": "now"
+    },
+    "timezone": "browser",
+    "title": "TP_BD - Docker Container Insights",
+    "uid": "tp-bd-docker",
+    "version": 1
+}

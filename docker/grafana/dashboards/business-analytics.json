@@ -1,0 +1,181 @@
+{
+    "annotations": {
+        "list": []
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 0,
+    "id": null,
+    "links": [],
+    "liveNow": false,
+    "panels": [
+        {
+            "title": "Business Application Metrics",
+            "type": "row",
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+            }
+        },
+        {
+            "title": "Total Users",
+            "type": "stat",
+            "datasource": "MariaDB",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 0,
+                "y": 1
+            },
+            "targets": [
+                {
+                    "format": "table",
+                    "group": [],
+                    "metricColumn": "none",
+                    "rawQuery": true,
+                    "rawSql": "SELECT count(*) as 'Users' FROM users",
+                    "refId": "A",
+                    "select": [
+                        [
+                            {
+                                "params": [
+                                    "id"
+                                ],
+                                "type": "column"
+                            }
+                        ]
+                    ],
+                    "table": "users",
+                    "timeColumn": "created_at",
+                    "timeColumnType": "timestamp",
+                    "where": []
+                }
+            ]
+        },
+        {
+            "title": "Total Friends",
+            "type": "stat",
+            "datasource": "MariaDB",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 6,
+                "y": 1
+            },
+            "targets": [
+                {
+                    "format": "table",
+                    "group": [],
+                    "metricColumn": "none",
+                    "rawQuery": true,
+                    "rawSql": "SELECT count(*) FROM friends",
+                    "refId": "A",
+                    "select": [
+                        [
+                            {
+                                "params": [
+                                    "id"
+                                ],
+                                "type": "column"
+                            }
+                        ]
+                    ],
+                    "table": "friends",
+                    "timeColumn": "created_at",
+                    "timeColumnType": "timestamp",
+                    "where": []
+                }
+            ]
+        },
+        {
+            "title": "User Growth (Last 30 Days)",
+            "type": "timeseries",
+            "datasource": "MariaDB",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 1
+            },
+            "targets": [
+                {
+                    "format": "time_series",
+                    "group": [],
+                    "metricColumn": "none",
+                    "rawQuery": true,
+                    "rawSql": "SELECT created_at as time_sec, count(*) as value, 'New Users' as metric FROM users GROUP BY created_at ORDER BY created_at ASC",
+                    "refId": "A",
+                    "select": [
+                        [
+                            {
+                                "params": [
+                                    "id"
+                                ],
+                                "type": "column"
+                            }
+                        ]
+                    ],
+                    "table": "users",
+                    "timeColumn": "created_at",
+                    "timeColumnType": "timestamp",
+                    "where": []
+                }
+            ]
+        },
+        {
+            "title": "Latest User Activity",
+            "type": "table",
+            "datasource": "MariaDB",
+            "gridPos": {
+                "h": 8,
+                "w": 24,
+                "x": 0,
+                "y": 9
+            },
+            "targets": [
+                {
+                    "format": "table",
+                    "group": [],
+                    "metricColumn": "none",
+                    "rawQuery": true,
+                    "rawSql": "SELECT id, name, email, created_at FROM users ORDER BY created_at DESC LIMIT 10",
+                    "refId": "A",
+                    "select": [
+                        [
+                            {
+                                "params": [
+                                    "id"
+                                ],
+                                "type": "column"
+                            }
+                        ]
+                    ],
+                    "table": "users",
+                    "timeColumn": "created_at",
+                    "timeColumnType": "timestamp",
+                    "where": []
+                }
+            ]
+        }
+    ],
+    "refresh": "5s",
+    "schemaVersion": 38,
+    "style": "dark",
+    "tags": [
+        "business",
+        "analytics"
+    ],
+    "templating": {
+        "list": []
+    },
+    "time": {
+        "from": "now-6h",
+        "to": "now"
+    },
+    "timezone": "browser",
+    "title": "TP_BD - Business Analytics (SQL)",
+    "uid": "tp-bd-business",
+    "version": 1
+}
