@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
 
 class Friend extends Model
 {
@@ -77,7 +77,7 @@ class Friend extends Model
      */
     public function getRouteKey(): string
     {
-        return $this->getAttribute('user_id_1') . '-' . $this->getAttribute('user_id_2');
+        return $this->getAttribute('user_id_1').'-'.$this->getAttribute('user_id_2');
     }
 
     /**

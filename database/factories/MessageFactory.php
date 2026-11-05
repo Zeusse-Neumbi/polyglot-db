@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use App\Models\Message;
 use App\Models\Conversation;
+use App\Models\Message;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class MessageFactory extends Factory
 {
@@ -18,7 +18,7 @@ class MessageFactory extends Factory
             'sender_id' => User::factory(),
             'body' => fake()->sentence(),
             'attachments' => fake()->boolean(20) ? [
-                ['type' => 'image', 'url' => fake()->imageUrl()]
+                ['type' => 'image', 'url' => fake()->imageUrl()],
             ] : null,
             'is_read' => fake()->boolean(),
         ];
@@ -29,7 +29,7 @@ class MessageFactory extends Factory
      */
     public function unread(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'is_read' => false,
         ]);
     }
@@ -39,7 +39,7 @@ class MessageFactory extends Factory
      */
     public function read(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'is_read' => true,
         ]);
     }
@@ -49,9 +49,9 @@ class MessageFactory extends Factory
      */
     public function withAttachment(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'attachments' => [
-                ['type' => fake()->randomElement(['image', 'video', 'file']), 'url' => fake()->url()]
+                ['type' => fake()->randomElement(['image', 'video', 'file']), 'url' => fake()->url()],
             ],
         ]);
     }

@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\Friend;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class FriendFactory extends Factory
 {
@@ -25,7 +25,7 @@ class FriendFactory extends Factory
      */
     public function pending(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'status' => 'pending',
             'accepted_at' => null,
         ]);
@@ -36,7 +36,7 @@ class FriendFactory extends Factory
      */
     public function accepted(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'status' => 'accepted',
             'accepted_at' => now(),
         ]);
@@ -47,7 +47,7 @@ class FriendFactory extends Factory
      */
     public function rejected(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'status' => 'rejected',
             'accepted_at' => null,
         ]);
@@ -58,7 +58,7 @@ class FriendFactory extends Factory
      */
     public function blocked(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'status' => 'blocked',
             'accepted_at' => null,
         ]);

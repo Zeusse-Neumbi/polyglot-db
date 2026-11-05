@@ -10,7 +10,9 @@ class GroupUser extends Pivot
     use HasFactory;
 
     protected $table = 'group_user';
+
     public $incrementing = false;
+
     public $timestamps = false;
 
     protected $fillable = [

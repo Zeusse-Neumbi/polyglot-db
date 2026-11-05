@@ -8,6 +8,7 @@ use MongoDB\Laravel\Eloquent\Model;
 class Notification extends Model
 {
     protected $connection = 'mongodb';
+
     use HasFactory;
 
     protected $fillable = [

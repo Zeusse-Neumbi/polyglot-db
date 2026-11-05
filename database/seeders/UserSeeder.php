@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use Database\Seeders\Helpers\SeedingConfig;
+use Database\Seeders\Helpers\TimeSimulator;
 use Illuminate\Database\Seeder;
 
 class UserSeeder extends Seeder
@@ -12,8 +14,8 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        $config = app(\Database\Seeders\Helpers\SeedingConfig::class);
-        $timeSim = app(\Database\Seeders\Helpers\TimeSimulator::class);
+        $config = app(SeedingConfig::class);
+        $timeSim = app(TimeSimulator::class);
 
         $totalUsers = $config->getUserCount();
         $chunkSize = $config->getChunkSize();
@@ -63,7 +65,7 @@ class UserSeeder extends Seeder
                 $attributes['is_active'] = rand(0, 10) > 1; // 10% inactive
 
                 // Simulate some old accounts being deleted/inactive?
-                if (!$attributes['is_active']) {
+                if (! $attributes['is_active']) {
                     $attributes['deleted_at'] = rand(0, 10) > 8 ? $joinDate->copy()->addMonths(rand(1, 24))->toDateTimeString() : null;
                 } else {
                     $attributes['deleted_at'] = null;

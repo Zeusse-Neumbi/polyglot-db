@@ -5,6 +5,8 @@ namespace Database\Seeders;
 use App\Models\Notification;
 use App\Models\SessionAudit;
 use App\Models\User;
+use Database\Seeders\Helpers\SeedingConfig;
+use Database\Seeders\Helpers\TimeSimulator;
 use Illuminate\Database\Seeder;
 
 class NotificationSeeder extends Seeder
@@ -14,8 +16,8 @@ class NotificationSeeder extends Seeder
      */
     public function run(): void
     {
-        $config = app(\Database\Seeders\Helpers\SeedingConfig::class);
-        $timeSim = app(\Database\Seeders\Helpers\TimeSimulator::class);
+        $config = app(SeedingConfig::class);
+        $timeSim = app(TimeSimulator::class);
 
         $this->command->info('Creating Notifications and Session Audits...');
 
@@ -63,13 +65,13 @@ class NotificationSeeder extends Seeder
                 }
             }
 
-            if (!empty($notifsData)) {
+            if (! empty($notifsData)) {
                 foreach (array_chunk($notifsData, 1000) as $chunk) {
                     Notification::insert($chunk);
                 }
             }
 
-            if (!empty($sessionsData)) {
+            if (! empty($sessionsData)) {
                 foreach (array_chunk($sessionsData, 1000) as $chunk) {
                     SessionAudit::insert($chunk);
                 }

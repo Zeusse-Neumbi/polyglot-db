@@ -10,7 +10,9 @@ class PageFollower extends Pivot
     use HasFactory;
 
     protected $table = 'page_followers';
+
     public $incrementing = false;
+
     public $timestamps = false;
 
     protected $fillable = [

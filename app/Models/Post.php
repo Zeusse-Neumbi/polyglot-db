@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use MongoDB\Laravel\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Redis;
+use MongoDB\Laravel\Eloquent\Model;
 
 class Post extends Model
 {
     protected $connection = 'mongodb';
+
     use HasFactory, SoftDeletes;
 
     /**
@@ -123,4 +124,3 @@ class Post extends Model
         $this->decrement('comments_count');
     }
 }
-

@@ -3,10 +3,14 @@
 namespace Database\Seeders;
 
 use App\Models\Comment;
+use App\Models\Page;
 use App\Models\Post;
 use App\Models\Reaction;
 use App\Models\User;
+use Database\Seeders\Helpers\SeedingConfig;
+use Database\Seeders\Helpers\TimeSimulator;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class PostSeeder extends Seeder
 {
@@ -15,8 +19,8 @@ class PostSeeder extends Seeder
      */
     public function run(): void
     {
-        $config = app(\Database\Seeders\Helpers\SeedingConfig::class);
-        $timeSim = app(\Database\Seeders\Helpers\TimeSimulator::class);
+        $config = app(SeedingConfig::class);
+        $timeSim = app(TimeSimulator::class);
 
         $chunkSize = $config->getChunkSize();
 
@@ -37,7 +41,7 @@ class PostSeeder extends Seeder
             $postsData = [];
             foreach ($users as $user) {
                 // Use persona-based post counts for consistency
-                $persona = \Database\Seeders\Helpers\SeedingConfig::getUserPersona($user->id);
+                $persona = SeedingConfig::getUserPersona($user->id);
                 $postRanges = $config->getPostsPerUser();
                 $range = $postRanges[$persona] ?? [0, 0];
                 $postCount = rand($range[0], $range[1]);
@@ -49,7 +53,7 @@ class PostSeeder extends Seeder
                     $postsData[] = [
                         'author_id' => $user->id,
                         'author_type' => User::class,
-                        'content' => \Database\Seeders\Helpers\SeedingConfig::generatePostContent(),
+                        'content' => SeedingConfig::generatePostContent(),
                         'media' => null,
                         'visibility' => 'public',
                         'likes_count' => 0,
@@ -66,8 +70,8 @@ class PostSeeder extends Seeder
             }
 
             // WRAP IN TRANSACTION for faster writes
-            if (!empty($postsData)) {
-                \Illuminate\Support\Facades\DB::transaction(function () use ($postsData) {
+            if (! empty($postsData)) {
+                DB::transaction(function () use ($postsData) {
                     foreach (array_chunk($postsData, 500) as $chunk) {
                         Post::insert($chunk);
                     }
@@ -81,11 +85,11 @@ class PostSeeder extends Seeder
 
         // Create Posts for Pages
         $this->command->info('Creating Page Posts...');
-        $totalPages = \App\Models\Page::count();
+        $totalPages = Page::count();
         if ($totalPages > 0) {
             $currentId = 1;
             while ($currentId <= $totalPages) {
-                $pages = \App\Models\Page::whereBetween('id', [$currentId, $currentId + $chunkSize - 1])
+                $pages = Page::whereBetween('id', [$currentId, $currentId + $chunkSize - 1])
                     ->get(['id', 'created_at']);
 
                 $postsData = [];
@@ -99,8 +103,8 @@ class PostSeeder extends Seeder
                         // SKIP FACTORY OVERHEAD - Direct array generation
                         $postsData[] = [
                             'author_id' => $page->id,
-                            'author_type' => \App\Models\Page::class,
-                            'content' => \Database\Seeders\Helpers\SeedingConfig::generatePostContent(),
+                            'author_type' => Page::class,
+                            'content' => SeedingConfig::generatePostContent(),
                             'media' => null,
                             'visibility' => 'public',
                             'likes_count' => 0,
@@ -111,8 +115,8 @@ class PostSeeder extends Seeder
                     }
                 }
                 // WRAP IN TRANSACTION for faster writes
-                if (!empty($postsData)) {
-                    \Illuminate\Support\Facades\DB::transaction(function () use ($postsData) {
+                if (! empty($postsData)) {
+                    DB::transaction(function () use ($postsData) {
                         foreach (array_chunk($postsData, 500) as $chunk) {
                             Post::insert($chunk);
                         }
@@ -139,7 +143,7 @@ class PostSeeder extends Seeder
             $commentsData = [];
             $reactionsData = [];
 
-            // Pre-calculate random users for this batch to save rand calls? 
+            // Pre-calculate random users for this batch to save rand calls?
             // Better: just pick random IDs.
 
             foreach ($posts as $post) {
@@ -184,11 +188,11 @@ class PostSeeder extends Seeder
 
             // Insert in chunks
             // Use standard insert() as we handled uniqueness above (mostly)
-            // Note: If DB has unique constraint and we happen to pick same user for same post in a different batch? 
-            // We are processing posts by ID. We handle ALL reactions for ONE post here. 
+            // Note: If DB has unique constraint and we happen to pick same user for same post in a different batch?
+            // We are processing posts by ID. We handle ALL reactions for ONE post here.
             // So PHP dedupe is sufficient.
 
-            if (!empty($reactionsData)) {
+            if (! empty($reactionsData)) {
                 foreach (array_chunk($reactionsData, 1000) as $chunk) {
                     try {
                         Reaction::insert($chunk);
@@ -198,7 +202,7 @@ class PostSeeder extends Seeder
                 }
             }
 
-            if (!empty($commentsData)) {
+            if (! empty($commentsData)) {
                 foreach (array_chunk($commentsData, 1000) as $chunk) {
                     Comment::insert($chunk);
                 }
@@ -253,24 +257,32 @@ class PostSeeder extends Seeder
     private function getReactionCount(): int
     {
         $rand = rand(1, 100);
-        if ($rand > 90)
-            return rand(100, 300); // 10% Viral (High)
-        if ($rand > 60)
-            return rand(20, 80);   // 30% Popular
-        if ($rand > 20)
-            return rand(5, 20);    // 40% Standard
+        if ($rand > 90) {
+            return rand(100, 300);
+        } // 10% Viral (High)
+        if ($rand > 60) {
+            return rand(20, 80);
+        }   // 30% Popular
+        if ($rand > 20) {
+            return rand(5, 20);
+        }    // 40% Standard
+
         return 0; // 20% Ignored
     }
 
     private function getCommentCount(): int
     {
         $rand = rand(1, 100);
-        if ($rand > 95)
-            return rand(30, 80); // 5% Viral
-        if ($rand > 75)
-            return rand(10, 30); // 20% Popular
-        if ($rand > 40)
-            return rand(3, 10);  // 35% Active
+        if ($rand > 95) {
+            return rand(30, 80);
+        } // 5% Viral
+        if ($rand > 75) {
+            return rand(10, 30);
+        } // 20% Popular
+        if ($rand > 40) {
+            return rand(3, 10);
+        }  // 35% Active
+
         return 0;
     }
 }

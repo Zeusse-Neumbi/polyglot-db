@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Services\TrafficSimulationService;
+use Illuminate\Console\Command;
 
 class SimulateTraffic extends Command
 {

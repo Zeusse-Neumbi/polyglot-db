@@ -8,6 +8,7 @@ use MongoDB\Laravel\Eloquent\Model;
 class Message extends Model
 {
     protected $connection = 'mongodb';
+
     use HasFactory;
 
     protected $fillable = [

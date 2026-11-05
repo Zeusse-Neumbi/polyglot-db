@@ -7,7 +7,9 @@ use Carbon\Carbon;
 class TimeSimulator
 {
     private Carbon $startDate;
+
     private Carbon $endDate;
+
     private int $totalDurationDays;
 
     public function __construct()

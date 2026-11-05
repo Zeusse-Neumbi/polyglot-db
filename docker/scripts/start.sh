@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🚀 TP_BD Enterprise Stack - Startup Script"
+echo "🚀 Polyglot DB stack - Startup Script"
 echo "============================================"
 
 # Colors for output
@@ -74,13 +74,21 @@ docker compose exec -T app-1 php artisan route:cache
 
 echo ""
 echo -e "${GREEN}============================================${NC}"
-echo -e "${GREEN}✅ TP_BD Enterprise Stack is ready!${NC}"
+echo -e "${GREEN}✅ Polyglot DB stack is ready!${NC}"
 echo -e "${GREEN}============================================${NC}"
 echo ""
 echo "📊 Access Points:"
 echo "   🌐 Application:    http://localhost"
-echo "   🔍 MariaDB Primary: localhost:3306"
-echo "   🔍 MariaDB Replica: localhost:3307"
-echo "   🍃 MongoDB Primary: localhost:27017"
-echo "   🔴 Redis Cache:     localhost:6379"
-echo "   🔴 Redis Queue:     localhost:6380"
+echo "   📈 Grafana:        http://localhost:3000 (admin / admin)"
+echo "   🔎 Prometheus:     http://localhost:9099"
+echo "   🐳 Portainer:      http://localhost:9000"
+echo "   🗄️  Adminer:        http://localhost:8081"
+echo "   🍃 Mongo Express:  http://localhost:8082 (admin / pass)"
+echo "   🔍 MariaDB Primary: localhost:3308"
+echo "   🔍 MariaDB Replica: localhost:3309"
+echo "   🍃 MongoDB Primary: localhost:27020"
+echo "   🔴 Redis Cache:     localhost:6381"
+echo "   🔴 Redis Queue:     localhost:6382"
+echo ""
+echo "Next: seed demo data with"
+echo "   docker compose exec app-1 php artisan db:seed"

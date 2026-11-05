@@ -21,7 +21,7 @@ This application uses a **hybrid database architecture**:
 
 | Database | Purpose | Connection |
 |:---------|:--------|:-----------|
-| **MariaDB** | Relational data (users, friendships, groups) | `mysql` |
+| **MariaDB** | Relational data (users, friendships, groups) | `mariadb` |
 | **MongoDB** | Document data (posts, comments, messages) | `mongodb` |
 | **Redis** | Caching & sessions | `redis` |
 
@@ -30,16 +30,18 @@ This application uses a **hybrid database architecture**:
 Database connections are configured in `config/database.php`:
 
 ```php
-// MariaDB (default)
-'mysql' => [
-    'driver' => 'mysql',
-    'database' => env('DB_DATABASE', 'social_network'),
+// MariaDB (default for relational models)
+'mariadb' => [
+    'driver' => 'mariadb',
+    'host' => env('DB_HOST', '127.0.0.1'),
+    'database' => env('DB_DATABASE', 'tp_bd'),
 ]
 
 // MongoDB
 'mongodb' => [
     'driver' => 'mongodb',
-    'dsn' => env('MONGODB_URI'),
+    'host' => env('DB_MONGO_HOST', '127.0.0.1'),
+    'database' => env('DB_MONGO_DATABASE', 'social_network_data'),
 ]
 ```
 

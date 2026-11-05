@@ -2,20 +2,20 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Models\Post;
 use App\Models\Comment;
-use App\Models\Friend;
-use App\Models\Message;
 use App\Models\Conversation;
+use App\Models\Friend;
 use App\Models\Group;
-use App\Models\Page;
-use App\Models\Reaction;
+use App\Models\Message;
 use App\Models\Notification;
+use App\Models\Page;
+use App\Models\Post;
+use App\Models\Reaction;
 use App\Models\SessionAudit;
+use App\Models\User;
 use Database\Seeders\Helpers\SeedingConfig;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class TrafficSimulationService
@@ -46,6 +46,7 @@ class TrafficSimulationService
 
         if ($allActive->isEmpty()) {
             Log::info('No users found for simulation.');
+
             return 0;
         }
 
@@ -62,8 +63,9 @@ class TrafficSimulationService
         // Main loop with session-based bursts
         while (time() < $endTime) {
             foreach ($usersWithPersonas as $userData) {
-                if (time() >= $endTime)
+                if (time() >= $endTime) {
                     break;
+                }
 
                 $user = $userData['user'];
                 $persona = $userData['persona'];
@@ -74,7 +76,7 @@ class TrafficSimulationService
                     try {
                         $this->performRandomAction($user, $persona);
                     } catch (\Exception $e) {
-                        Log::error("Sim Error User {$user->id}: " . $e->getMessage());
+                        Log::error("Sim Error User {$user->id}: ".$e->getMessage());
                     }
                 }
             }
@@ -86,6 +88,7 @@ class TrafficSimulationService
         }
 
         Log::info("Simulation ended. Total actions: {$this->actionCount}");
+
         return $this->actionCount;
     }
 
@@ -150,6 +153,7 @@ class TrafficSimulationService
             } else {
                 $this->commentOnPost($user);
             }
+
             return;
         }
 
@@ -174,6 +178,7 @@ class TrafficSimulationService
             } else {
                 $this->handlePageAction($user);
             }
+
             return;
         }
 
@@ -246,11 +251,12 @@ class TrafficSimulationService
             ? Post::orderBy('likes_count', 'desc')->take(100)->get()->random()
             : Post::inRandomOrder()->first();
 
-        if (!$post)
+        if (! $post) {
             return;
+        }
 
         $exists = Reaction::where('user_id', $user->id)->where('post_id', $post->id)->exists();
-        if (!$exists) {
+        if (! $exists) {
             Reaction::create([
                 'user_id' => $user->id,
                 'post_id' => $post->id,
@@ -265,10 +271,12 @@ class TrafficSimulationService
     {
         // Prefer engaging posts
         $post = Post::orderBy('comments_count', 'desc')->take(50)->get()->random();
-        if (!$post)
+        if (! $post) {
             $post = Post::inRandomOrder()->first();
-        if (!$post)
+        }
+        if (! $post) {
             return;
+        }
 
         Comment::create([
             'user_id' => $user->id,
@@ -287,19 +295,21 @@ class TrafficSimulationService
                 $pending->update(['status' => 'accepted', 'accepted_at' => now()]);
                 $this->actionCount++;
                 Log::debug("User {$user->id} accepted friend request");
+
                 return;
             }
         }
 
         $target = User::inRandomOrder()->where('id', '!=', $user->id)->first();
-        if (!$target)
+        if (! $target) {
             return;
+        }
 
         $min = min($user->id, $target->id);
         $max = max($user->id, $target->id);
 
         $exists = Friend::where('user_id_1', $min)->where('user_id_2', $max)->exists();
-        if (!$exists) {
+        if (! $exists) {
             Friend::create(['user_id_1' => $min, 'user_id_2' => $max, 'status' => 'pending']);
             $this->actionCount++;
             Log::debug("User {$user->id} sent friend request");
@@ -310,10 +320,11 @@ class TrafficSimulationService
     {
         $conversation = $user->conversations()->inRandomOrder()->first();
 
-        if (!$conversation) {
+        if (! $conversation) {
             $target = User::inRandomOrder()->where('id', '!=', $user->id)->first();
-            if (!$target)
+            if (! $target) {
                 return;
+            }
 
             $conversation = Conversation::create(['type' => 'private']);
             DB::table('conversation_user')->insert([
@@ -339,7 +350,7 @@ class TrafficSimulationService
         if (rand(1, 100) <= 10) {
             $group = Group::create([
                 'owner_id' => $user->id,
-                'name' => fake()->company . ' Group',
+                'name' => fake()->company.' Group',
                 'description' => fake()->catchPhrase,
                 'visibility' => 'public',
                 'avatar' => null,
@@ -354,7 +365,7 @@ class TrafficSimulationService
             Log::debug("User {$user->id} created group");
         } else {
             $group = Group::inRandomOrder()->first();
-            if ($group && !$group->users()->where('user_id', $user->id)->exists()) {
+            if ($group && ! $group->users()->where('user_id', $user->id)->exists()) {
                 DB::table('group_user')->insert([
                     'group_id' => $group->id,
                     'user_id' => $user->id,
@@ -381,7 +392,7 @@ class TrafficSimulationService
             Log::debug("User {$user->id} created page");
         } else {
             $page = Page::inRandomOrder()->first();
-            if ($page && !$page->followers()->where('user_id', $user->id)->exists()) {
+            if ($page && ! $page->followers()->where('user_id', $user->id)->exists()) {
                 DB::table('page_followers')->insert([
                     'page_id' => $page->id,
                     'user_id' => $user->id,
@@ -433,8 +444,9 @@ class TrafficSimulationService
     protected function markMessagesRead(User $user): void
     {
         $conversation = $user->conversations()->inRandomOrder()->first();
-        if (!$conversation)
+        if (! $conversation) {
             return;
+        }
 
         $messages = Message::where('conversation_id', $conversation->id)
             ->where('sender_id', '!=', $user->id)
@@ -456,9 +468,9 @@ class TrafficSimulationService
         if ($field === 1) {
             $updates['bio'] = fake()->sentence;
         } elseif ($field === 2) {
-            $updates['profile_photo'] = 'https://i.pravatar.cc/150?u=' . $user->id;
+            $updates['profile_photo'] = 'https://i.pravatar.cc/150?u='.$user->id;
         } else {
-            $updates['cover_photo'] = 'https://picsum.photos/800/300?random=' . rand(1, 1000);
+            $updates['cover_photo'] = 'https://picsum.photos/800/300?random='.rand(1, 1000);
         }
 
         $user->update($updates);
@@ -478,17 +490,19 @@ class TrafficSimulationService
     protected function postInGroup(User $user): void
     {
         $membership = DB::table('group_user')->where('user_id', $user->id)->inRandomOrder()->first();
-        if (!$membership)
+        if (! $membership) {
             return;
+        }
 
         $group = Group::find($membership->group_id);
-        if (!$group)
+        if (! $group) {
             return;
+        }
 
         Post::create([
             'author_id' => $user->id,
             'author_type' => User::class,
-            'content' => "[Group: {$group->name}] " . SeedingConfig::generatePostContent(),
+            'content' => "[Group: {$group->name}] ".SeedingConfig::generatePostContent(),
             'visibility' => 'group',
             'likes_count' => 0,
             'comments_count' => 0,
@@ -500,8 +514,9 @@ class TrafficSimulationService
     protected function postAsPage(User $user): void
     {
         $page = Page::where('owner_id', $user->id)->inRandomOrder()->first();
-        if (!$page)
+        if (! $page) {
             return;
+        }
 
         Post::create([
             'author_id' => $page->id,

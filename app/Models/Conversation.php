@@ -12,7 +12,6 @@ class Conversation extends Model
 
     const UPDATED_AT = null;
 
-
     protected $fillable = ['type'];
 
     public function users()

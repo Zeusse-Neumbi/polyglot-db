@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use App\Models\Friend;
 use App\Models\User;
+use Database\Seeders\Helpers\SeedingConfig;
+use Database\Seeders\Helpers\TimeSimulator;
 use Illuminate\Database\Seeder;
 
 class FriendSeeder extends Seeder
@@ -13,8 +15,8 @@ class FriendSeeder extends Seeder
      */
     public function run(): void
     {
-        $config = app(\Database\Seeders\Helpers\SeedingConfig::class);
-        $timeSim = app(\Database\Seeders\Helpers\TimeSimulator::class);
+        $config = app(SeedingConfig::class);
+        $timeSim = app(TimeSimulator::class);
 
         // Configuration
         $totalUsers = User::count(); // Should match config->getUserCount() roughly
@@ -27,7 +29,7 @@ class FriendSeeder extends Seeder
 
         // Processing in chunks to avoid memory issues
         // We will iterate user by user (in chunks) and assign them friends.
-        // To avoid duplicates, we only assign friends with ID > current ID? 
+        // To avoid duplicates, we only assign friends with ID > current ID?
         // Or simple constraint: Check unique key logic.
         // The table has (user_a, user_b) PK and check constraint user_a < user_b usually
         // Actually schema says: user_a <> user_b. And primary key (user_a, user_b).
@@ -53,10 +55,10 @@ class FriendSeeder extends Seeder
 
                 // Pick random IDs for friends.
                 // We pick from entire population.
-                // We only insert if we are the "smaller" ID to avoid duplicates 
+                // We only insert if we are the "smaller" ID to avoid duplicates
                 // AND to ensure we don't double count connections (A->B and B->A is same row).
 
-                // Wait, if I iterate everyone, I should only add connections to IDs > $user->id 
+                // Wait, if I iterate everyone, I should only add connections to IDs > $user->id
                 // to effectively fill the upper triangle of the adjacency matrix.
                 // But that biases "old" users to only have "new" friends? No.
                 // Correct: "Old" users can have "Old" friends.
@@ -118,7 +120,7 @@ class FriendSeeder extends Seeder
 
             // Insert Ignore/Upsert
             // Laravel insertOrIgnore is great here (requires unique index on pairs)
-            if (!empty($friendships)) {
+            if (! empty($friendships)) {
                 Friend::insertOrIgnore($friendships);
             }
 
@@ -137,16 +139,20 @@ class FriendSeeder extends Seeder
         if (rand(1, 100) > 80) {
             return rand($average, $max);
         }
+
         return rand($min, $average);
     }
 
     private function getRandomStatus()
     {
         $rand = rand(1, 100);
-        if ($rand <= 90)
+        if ($rand <= 90) {
             return 'accepted';
-        if ($rand <= 95)
+        }
+        if ($rand <= 95) {
             return 'pending';
+        }
+
         return 'blocked'; // or rejected
     }
 }

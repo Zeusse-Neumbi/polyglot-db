@@ -8,35 +8,37 @@ use Tests\TestCase;
 
 class DatabaseConnectionTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        if (! filter_var(getenv('RUN_DB_INTEGRATION_TESTS'), FILTER_VALIDATE_BOOLEAN)) {
+            $this->markTestSkipped(
+                'Set RUN_DB_INTEGRATION_TESTS=1 and start the Docker stack to run live database checks.'
+            );
+        }
+    }
+
     public function test_mariadb_connection()
     {
-        try {
-            config(['database.connections.mariadb.database' => 'tp_bd']);
-            DB::connection('mariadb')->getPdo();
-            $this->assertTrue(true);
-        } catch (\Exception $e) {
-            $this->fail('Failed to connect to MariaDB: ' . $e->getMessage());
-        }
+        config(['database.connections.mariadb.database' => 'tp_bd']);
+        DB::connection('mariadb')->getPdo();
+
+        $this->assertTrue(true);
     }
 
     public function test_mongodb_connection()
     {
-        try {
-            $connection = DB::connection('mongodb');
-            $connection->getMongoClient()->listDatabases();
-            $this->assertTrue(true);
-        } catch (\Exception $e) {
-            $this->fail('Failed to connect to MongoDB: ' . $e->getMessage());
-        }
+        $connection = DB::connection('mongodb');
+        $connection->getMongoClient()->listDatabases();
+
+        $this->assertTrue(true);
     }
 
     public function test_redis_connection()
     {
-        try {
-            Redis::connection()->ping();
-            $this->assertTrue(true);
-        } catch (\Exception $e) {
-            $this->fail('Failed to connect to Redis: ' . $e->getMessage());
-        }
+        Redis::connection()->ping();
+
+        $this->assertTrue(true);
     }
 }

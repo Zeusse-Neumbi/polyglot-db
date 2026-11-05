@@ -2,10 +2,11 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
+use App\Models\Message;
+use App\Models\Post;
 use App\Models\Reaction;
 use App\Models\User;
-use App\Models\Post;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class ReactionFactory extends Factory
 {
@@ -26,9 +27,9 @@ class ReactionFactory extends Factory
      */
     public function forMessage(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'post_id' => null,
-            'message_id' => \App\Models\Message::factory(),
+            'message_id' => Message::factory(),
         ]);
     }
 
@@ -37,7 +38,7 @@ class ReactionFactory extends Factory
      */
     public function like(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'reaction_type' => 'like',
         ]);
     }
@@ -47,7 +48,7 @@ class ReactionFactory extends Factory
      */
     public function love(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'reaction_type' => 'love',
         ]);
     }

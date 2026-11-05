@@ -6,9 +6,13 @@ class SeedingConfig
 {
     // Define available scales
     const SCALE_SMALL = 'small';
+
     const SCALE_MEDIUM = 'medium';
+
     const SCALE_LARGE = 'large';
+
     const SCALE_XL = 'xl';
+
     const SCALE_MAX = 'max';
 
     // Scale definitions
@@ -41,11 +45,12 @@ class SeedingConfig
     ];
 
     private string $currentScale;
+
     private array $config;
 
     public function __construct(string $scale = self::SCALE_SMALL)
     {
-        if (!array_key_exists($scale, self::$scales)) {
+        if (! array_key_exists($scale, self::$scales)) {
             throw new \InvalidArgumentException("Invalid scale: $scale");
         }
         $this->currentScale = $scale;
@@ -158,12 +163,16 @@ class SeedingConfig
         $hash = crc32("user_{$userId}");
         $rand = $hash % 100;
 
-        if ($rand < 10)
-            return 'power_user';  // 10%
-        if ($rand < 50)
-            return 'casual';      // 40%
-        if ($rand < 80)
-            return 'lurker';      // 30%
+        if ($rand < 10) {
+            return 'power_user';
+        }  // 10%
+        if ($rand < 50) {
+            return 'casual';
+        }      // 40%
+        if ($rand < 80) {
+            return 'lurker';
+        }      // 30%
+
         return 'inactive';                     // 20%
     }
 
@@ -202,9 +211,9 @@ class SeedingConfig
         } elseif ($type <= 40) {
             // Question (20%)
             return fake()->randomElement([
-                'Anyone know ' . fake()->sentence() . '?',
-                'What do you think about ' . fake()->words(3, true) . '?',
-                'Has anyone tried ' . fake()->words(2, true) . '?',
+                'Anyone know '.fake()->sentence().'?',
+                'What do you think about '.fake()->words(3, true).'?',
+                'Has anyone tried '.fake()->words(2, true).'?',
             ]);
         } elseif ($type <= 70) {
             // Regular post (30%)

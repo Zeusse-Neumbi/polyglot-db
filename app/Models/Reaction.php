@@ -8,6 +8,7 @@ use MongoDB\Laravel\Eloquent\Model;
 class Reaction extends Model
 {
     protected $connection = 'mongodb';
+
     use HasFactory;
 
     protected static function booted()

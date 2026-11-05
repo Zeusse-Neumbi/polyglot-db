@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -11,8 +12,8 @@ use MongoDB\Laravel\Eloquent\HybridRelations;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, SoftDeletes, HybridRelations;
+    /** @use HasFactory<UserFactory> */
+    use HasFactory, HybridRelations, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'username',

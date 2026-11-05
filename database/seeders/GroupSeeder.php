@@ -4,7 +4,10 @@ namespace Database\Seeders;
 
 use App\Models\Group;
 use App\Models\User;
+use Database\Seeders\Helpers\SeedingConfig;
+use Database\Seeders\Helpers\TimeSimulator;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class GroupSeeder extends Seeder
 {
@@ -13,8 +16,8 @@ class GroupSeeder extends Seeder
      */
     public function run(): void
     {
-        $config = app(\Database\Seeders\Helpers\SeedingConfig::class);
-        $timeSim = app(\Database\Seeders\Helpers\TimeSimulator::class);
+        $config = app(SeedingConfig::class);
+        $timeSim = app(TimeSimulator::class);
 
         $limit = $config->getGroupCount();
         $this->command->info("Creating {$limit} Groups with members...");
@@ -57,8 +60,9 @@ class GroupSeeder extends Seeder
                 $memberCount = rand(30, 150);
 
                 $memberIds = [];
-                for ($k = 0; $k < $memberCount; $k++)
+                for ($k = 0; $k < $memberCount; $k++) {
                     $memberIds[] = rand(1, $totalUsers);
+                }
                 $memberIds = array_unique($memberIds); // Dedupe
 
                 $first = true;
@@ -76,12 +80,12 @@ class GroupSeeder extends Seeder
                 }
             }
 
-            if (!empty($membersData)) {
+            if (! empty($membersData)) {
                 foreach (array_chunk($membersData, 1000) as $chunk) {
                     // Using DB facade or model insert
                     // We handle uniqueness per group above.
                     try {
-                        \Illuminate\Support\Facades\DB::table('group_user')->insert($chunk);
+                        DB::table('group_user')->insert($chunk);
                     } catch (\Exception $e) {
                     }
                 }

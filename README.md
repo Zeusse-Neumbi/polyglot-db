@@ -1,161 +1,216 @@
-# TP_BD — Polyglot Database Research Project
+# Polyglot DB
 
-<p align="center">
-  <strong>📊 Comparative Study: Polyglot vs Single Database Architecture</strong><br>
-  <em>Academic Research Project — Database Performance Analysis</em>
-</p>
+A hands-on lab for polyglot persistence: one Laravel social-network workload
+running on MariaDB, MongoDB, and Redis, with Docker, Prometheus, and Grafana.
 
----
+[![CI](https://github.com/Zeusse-Neumbi/polyglot-db/actions/workflows/ci.yml/badge.svg)](https://github.com/Zeusse-Neumbi/polyglot-db/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![PHP](https://img.shields.io/badge/PHP-8.3-777BB4?logo=php&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-## 🎯 Research Objective
+## What this is
 
-This project is an **academic research** to compare and analyze the performance differences between:
+This repository is an infrastructure and observability project. It runs the same
+application across two persistence models and exposes the result through
+Prometheus and Grafana:
 
-| Architecture | Description |
-|--------------|-------------|
-| **Polyglot DB** | Hybrid system using MariaDB + MongoDB + Redis |
-| **Simple DB** | Traditional single relational database (MariaDB only) |
+- **MariaDB** for relational data: users, roles, friendships, groups, pages, and
+  conversations.
+- **MongoDB** for document-shaped data: posts, comments, reactions, messages,
+  notifications, and session audits.
+- **Redis** for cache and queues, split into separate instances.
+- **nginx** in front of two Laravel containers for round-robin load balancing.
+- **Prometheus + Grafana** for application, database, container, and host
+  metrics.
 
-The goal is to **monitor database traffic** and measure efficiency to demonstrate when and why polyglot architectures outperform (or underperform) simple database solutions.
+> **Status: lab, not a finished comparative study.** The polyglot stack, seeders,
+> traffic simulator, and dashboards are implemented. The single-database
+> baseline and benchmark results are the next phase. See
+> [`docs/benchmark-plan.md`](docs/benchmark-plan.md).
 
----
+## Architecture
 
-## 🏗️ Research Approach
+```mermaid
+flowchart TB
+    Client[Browser / load test] --> Nginx[nginx :80]
+    Nginx --> App1[app-1]
+    Nginx --> App2[app-2]
 
-### Hypothesis
+    App1 --> Maria[(MariaDB primary)]
+    App2 --> Maria
+    App1 --> Mongo[(MongoDB replica set)]
+    App2 --> Mongo
+    App1 --> RedisCache[(Redis cache)]
+    App2 --> RedisCache
+    App1 --> RedisQueue[(Redis queue)]
+    App2 --> RedisQueue
 
-A polyglot database architecture provides better performance for complex social network workloads by leveraging:
-- **MariaDB** — Structured, relational data (users, relationships)
-- **MongoDB** — Flexible, document-based data (feeds, activity logs)
-- **Redis** — High-speed caching (sessions, real-time counters)
+    Maria --> Replica[(MariaDB replica)]
+    Mongo --> MongoSecondary[(mongo-secondary)]
+    Mongo --> MongoArbiter[(mongo-arbiter)]
 
-### Methodology
+    Prometheus[Prometheus] --> App1
+    Prometheus --> Maria
+    Prometheus --> Mongo
+    Prometheus --> RedisCache
+    Grafana[Grafana] --> Prometheus
+```
 
-1. **Build identical schema** on both architectures
-2. **Seed with realistic data** (users, posts, comments, reactions, etc.)
-3. **Run workload benchmarks** (read-heavy, write-heavy, mixed)
-4. **Monitor & measure** query latency, throughput, resource usage
-5. **Analyze results** to compare efficiency
+More detail: [`docs/architecture.md`](docs/architecture.md).
 
----
+## Implemented
 
-## ✅ What's Done
+- Laravel model layer for the relational and document stores.
+- 13 migrations for the relational schema and MongoDB collections.
+- Factories and modular seeders for users, friendships, posts, comments,
+  reactions, groups, pages, conversations, messages, notifications, and session
+  audits.
+- Docker Compose stack with:
+  - nginx load balancer
+  - two Laravel app containers
+  - queue worker
+  - MariaDB primary/replica
+  - MongoDB replica set with an arbiter
+  - separate Redis cache and queue instances
+  - Prometheus, Grafana, cAdvisor, node-exporter, and database exporters
+  - Portainer, Adminer, and Mongo Express
+- Four provisioned Grafana dashboards: business analytics, database comparison,
+  Docker monitoring, and host monitoring.
+- `traffic:simulate` command with a power-law user distribution and realistic
+  action mix.
+- Unit/feature test suite and a live integration test group for the Docker stack.
 
-### Database Schema
+## Not implemented yet
 
-- [x] Complete SQL schema design (`database/schema.sql`)
-- [x] 12+ tables: users, publications, comments, reactions, friends, conversations, messages, groups, pages, notifications, sessions_audit
-- [x] Indexes and foreign keys for relational integrity
-- [x] Triggers for automatic count updates (`likes_count`, `comments_count`)
+- A single-database baseline (`docker-compose.simple.yml`).
+- A committed benchmark harness and published results.
+- A production authentication/UI flow; the app is a workload and infrastructure
+  test bed, not a finished social network.
+- TLS, backups, and production secrets management.
 
-### Laravel Implementation
+## Quick start
 
-- [x] 13 migrations for all tables
-- [x] 14 Eloquent models with relationships
-- [x] 11 factories for realistic test data
-- [x] 8 modular seeders (Users → Friends → Posts → Groups → Pages → Conversations → Notifications)
-- [x] Hybrid relations support (`HybridRelations` trait for MongoDB)
-
-### Multi-DB Configuration
-
-- [x] MariaDB connection configured
-- [x] MongoDB connection configured
-- [x] Redis connection configured
-
----
-
-## 📋 TODO — Remaining Tasks
-
-### 🔬 Benchmark Setup
-
-- [ ] Create **simple DB version** (MariaDB only, no MongoDB/Redis)
-- [ ] Design **benchmark workloads** (CRUD operations, feeds, searches)
-- [ ] Implement **load testing scripts** (concurrent users simulation)
-
-### 📈 Monitoring & Metrics
-
-- [ ] Set up **query logging** for both architectures
-- [ ] Implement **traffic monitoring** (queries/second, latency)
-- [ ] Track **resource usage** (CPU, memory, I/O)
-- [ ] Configure **profiling tools** (MySQL slow query log, MongoDB profiler)
-
-### 📊 Data Collection
-
-- [ ] Define **metrics to capture**:
-  - Query execution time (avg, p95, p99)
-  - Throughput (queries/second)
-  - Connection pool usage
-  - Cache hit/miss ratio (Redis)
-  - Read vs write latency
-- [ ] Create **data collection scripts**
-- [ ] Build **results database/spreadsheet**
-
-### 🧪 Experiments to Run
-
-- [ ] **Experiment 1**: Read-heavy (90% reads / 10% writes)
-- [ ] **Experiment 2**: Write-heavy (30% reads / 70% writes)
-- [ ] **Experiment 3**: Mixed workload (50/50)
-- [ ] **Experiment 4**: Spike traffic simulation
-- [ ] **Experiment 5**: Large dataset (100K+ users, 1M+ posts)
-
-### 📝 Analysis & Report
-
-- [ ] Compile **benchmark results**
-- [ ] Create **comparison charts/graphs**
-- [ ] Write **research findings**
-- [ ] Prepare **conclusions & recommendations**
-
----
-
-## 🛠️ Tech Stack
-
-| Component | Technology | Role |
-|-----------|------------|------|
-| Framework | Laravel 12 | Application layer |
-| Primary DB | MariaDB | Relational data |
-| Document Store | MongoDB | Flexible storage |
-| Cache | Redis | High-speed caching |
-| Language | PHP 8.2+ | Backend |
-
----
-
-## 🚀 Quick Start
+Requirements: Docker Engine with Compose v2, at least 4 GB of RAM available to
+Docker, and ports 80, 3000, 3308–3309, 6381–6382, 8081–8082, 9000, 9099, and
+27020–27022 free.
 
 ```bash
-# Install dependencies
-composer install
+git clone https://github.com/Zeusse-Neumbi/polyglot-db.git
+cd polyglot-db
 
-# Configure environment
+cp .env.docker.example .env.docker
+bash docker/scripts/start.sh
+```
+
+`start.sh` builds the images, starts the stack, initializes the MongoDB replica
+set, configures MariaDB replication, runs migrations, and caches config/routes.
+
+Seed a small demo dataset (choose **Small — 1,000 users** on the first run):
+
+```bash
+docker compose exec app-1 php artisan db:seed
+```
+
+Run the traffic simulator for 60 seconds with 20% of users active:
+
+```bash
+docker compose exec app-1 php artisan traffic:simulate \
+  --duration=60 --active-percent=20
+```
+
+## Access points
+
+| Service | URL / port |
+| --- | --- |
+| Application | <http://localhost> |
+| Grafana | <http://localhost:3000> (`admin` / `admin`) |
+| Prometheus | <http://localhost:9099> |
+| Portainer | <http://localhost:9000> |
+| Adminer | <http://localhost:8081> |
+| Mongo Express | <http://localhost:8082> (`admin` / `pass`) |
+| MariaDB primary | `localhost:3308` |
+| MariaDB replica | `localhost:3309` |
+| MongoDB primary | `localhost:27020` |
+| Redis cache | `localhost:6381` |
+| Redis queue | `localhost:6382` |
+
+Health check: <http://localhost/health>.
+
+## Observability
+
+Prometheus scrapes the app containers, MariaDB, MongoDB, Redis, cAdvisor, and
+node-exporter. Grafana is provisioned from
+[`docker/grafana/dashboards`](docker/grafana/dashboards):
+
+- **Business analytics** — users, posts, comments, reactions, messages.
+- **Database comparison** — MariaDB vs MongoDB activity and latency.
+- **Docker monitoring** — per-container CPU, memory, network, and restarts.
+- **Host monitoring** — CPU, memory, disk, and load.
+
+Open Grafana after the stack is healthy. Dashboards are provisioned
+automatically; no manual import is required.
+
+## Tests
+
+The default suite uses in-memory SQLite and does not need the Docker stack:
+
+```bash
+composer install
 cp .env.example .env
 php artisan key:generate
-
-# Run migrations
-php artisan migrate
-
-# Seed test data
-php artisan db:seed
-
-# Start server
-composer dev
+php artisan test
 ```
 
----
+The live database checks are opt-in:
 
-## 📂 Project Structure
-
-```
-TP_BD/
-├── app/Models/           # 14 Eloquent models
-├── database/
-│   ├── factories/        # 11 factories
-│   ├── migrations/       # 13 migrations
-│   ├── seeders/          # 8 seeders
-│   └── schema.sql        # Raw SQL schema
-└── config/database.php   # Multi-DB config
+```bash
+RUN_DB_INTEGRATION_TESTS=1 php artisan test --filter=DatabaseConnectionTest
 ```
 
----
+Run that command only while the Docker stack is up; it expects MariaDB, MongoDB,
+and Redis on the ports documented above.
 
-## 📄 License
+## Project layout
 
-MIT License — Academic Research Project
+```text
+app/                    Laravel models, services, commands
+config/                 Database, queue, cache, and app configuration
+database/
+  migrations/           Relational schema
+  seeders/              Modular, resumable demo data
+docker/
+  app/                  PHP-FPM image
+  grafana/              Provisioned dashboards and datasources
+  mariadb/              Primary/replica configuration
+  prometheus/           Scrape configuration
+  scripts/              Start and status helpers
+docs/                   Architecture and benchmark plan
+tests/                  Unit, feature, and opt-in integration tests
+```
+
+## Design notes
+
+- **Two stores, one domain.** The split is deliberate: relational integrity for
+  identity and relationships, document storage for feed-shaped data. The extra
+  complexity is the subject of the lab, not an accident.
+- **Separate Redis instances.** Cache and queue traffic have different eviction
+  and latency requirements; sharing one instance would hide that tradeoff.
+- **The startup script is idempotent.** Re-running it tolerates an initialized
+  replica set and existing replication configuration.
+- **Monitoring is part of the implementation.** A stack that cannot show its own
+  latency and resource use cannot support a performance claim.
+- **No benchmark claim without a harness.** The README will not claim a speedup
+  until the baseline and results are committed.
+
+## Limitations
+
+- Development credentials are in `docker/` and `.env.docker.example`; they are
+  not production secrets.
+- The app is not a finished product; the primary user-facing route is a landing
+  page and `/health`.
+- The benchmark has not been run, so no performance conclusion is claimed.
+- The stack is resource-heavy by design and intended for a local workstation.
+
+## License
+
+[MIT](LICENSE) © 2026 Neumbi Kemgang Zeusse

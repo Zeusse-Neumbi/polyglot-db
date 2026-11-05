@@ -1,18 +1,35 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "zeusse-neumbi/polyglot-db",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Polyglot persistence lab: Laravel on MariaDB, MongoDB, and Redis with Docker, Prometheus, and Grafana.",
     "keywords": [
         "laravel",
-        "framework"
+        "polyglot-persistence",
+        "mariadb",
+        "mongodb",
+        "redis",
+        "docker",
+        "prometheus",
+        "grafana"
     ],
     "license": "MIT",
+    "authors": [
+        {
+            "name": "Neumbi Kemgang Zeusse",
+            "homepage": "https://github.com/Zeusse-Neumbi"
+        }
+    ],
+    "homepage": "https://github.com/Zeusse-Neumbi/polyglot-db",
+    "support": {
+        "issues": "https://github.com/Zeusse-Neumbi/polyglot-db/issues",
+        "source": "https://github.com/Zeusse-Neumbi/polyglot-db"
+    },
     "require": {
         "php": "^8.2",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
-        "mongodb/laravel-mongodb": "*"
+        "mongodb/laravel-mongodb": "^5.5"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

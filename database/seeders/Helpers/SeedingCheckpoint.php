@@ -32,7 +32,7 @@ class SeedingCheckpoint
     {
         $path = base_path(self::CHECKPOINT_FILE);
 
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             return null;
         }
 
@@ -45,6 +45,7 @@ class SeedingCheckpoint
     public static function shouldResume(string $seeder): bool
     {
         $data = self::load();
+
         return $data && $data['seeder'] === $seeder;
     }
 
@@ -57,6 +58,7 @@ class SeedingCheckpoint
         if ($data && $data['seeder'] === $seeder) {
             return $data['offset'];
         }
+
         return 0;
     }
 
@@ -85,12 +87,12 @@ class SeedingCheckpoint
     public static function getInfo(): ?string
     {
         $data = self::load();
-        if (!$data) {
+        if (! $data) {
             return null;
         }
 
         return sprintf(
-            "Found checkpoint: %s at offset %d (saved at %s)",
+            'Found checkpoint: %s at offset %d (saved at %s)',
             $data['seeder'],
             $data['offset'],
             $data['timestamp']

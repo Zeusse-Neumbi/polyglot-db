@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use MongoDB\Laravel\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use MongoDB\Laravel\Eloquent\Model;
 
 class Comment extends Model
 {
     protected $connection = 'mongodb';
+
     use HasFactory, SoftDeletes;
 
     protected static function booted()

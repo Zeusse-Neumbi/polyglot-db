@@ -2,17 +2,18 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use App\Models\User;
+use App\Models\Comment;
 use App\Models\Post;
 use App\Models\Reaction;
-use App\Models\Comment;
+use App\Models\User;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
 
 class VerifyRedis extends Command
 {
     protected $signature = 'verify:redis';
+
     protected $description = 'Verify Redis integration and counters';
 
     public function handle()
@@ -25,12 +26,14 @@ class VerifyRedis extends Command
             $val = Redis::get('test_connection');
             if ($val !== 'connected') {
                 $this->error('Redis connection check failed: Value mismatch.');
+
                 return 1;
             }
             Redis::del('test_connection');
             $this->info('✅ Redis Connection OK');
         } catch (\Exception $e) {
-            $this->error('Redis connection check failed: ' . $e->getMessage());
+            $this->error('Redis connection check failed: '.$e->getMessage());
+
             return 1;
         }
 
@@ -43,8 +46,8 @@ class VerifyRedis extends Command
             }
 
             $user = User::forceCreate([
-                'username' => 'redis_test_user_' . Str::random(5),
-                'email' => 'redis_test_' . Str::random(5) . '@example.com',
+                'username' => 'redis_test_user_'.Str::random(5),
+                'email' => 'redis_test_'.Str::random(5).'@example.com',
                 'password' => bcrypt('password'),
                 'nom' => 'Test',
                 'prenom' => 'User',
@@ -56,7 +59,8 @@ class VerifyRedis extends Command
                 'visibility' => 'public',
             ]);
         } catch (\Exception $e) {
-            $this->error('Failed to create test data: ' . $e->getMessage());
+            $this->error('Failed to create test data: '.$e->getMessage());
+
             return 1;
         }
 
@@ -78,7 +82,7 @@ class VerifyRedis extends Command
             $reaction = Reaction::create([
                 'post_id' => $post->id,
                 'user_id' => $user->id,
-                'reaction_type' => 'like'
+                'reaction_type' => 'like',
             ]);
 
             // Refresh post to ensure it uses fresh instances if logic depends on it (though accessors use Redis direct)
@@ -93,7 +97,7 @@ class VerifyRedis extends Command
             $comment = Comment::create([
                 'post_id' => $post->id,
                 'user_id' => $user->id,
-                'content' => 'Test Comment'
+                'content' => 'Test Comment',
             ]);
 
             if ($post->cached_comments_count !== 1) {
@@ -131,23 +135,27 @@ class VerifyRedis extends Command
                 $this->info('✅ Comments increment (restore) OK');
             }
         } catch (\Exception $e) {
-            $this->error('Error during logic verification: ' . $e->getMessage());
+            $this->error('Error during logic verification: '.$e->getMessage());
             $fail = true;
         }
 
         // Cleanup
         $this->info('Cleaning up...');
         try {
-            if (isset($comment))
+            if (isset($comment)) {
                 $comment->forceDelete();
-            if (isset($reaction))
-                $reaction->delete(); // might be already deleted
-            if (isset($post))
+            }
+            if (isset($reaction)) {
+                $reaction->delete();
+            } // might be already deleted
+            if (isset($post)) {
                 $post->forceDelete();
-            if (isset($user))
+            }
+            if (isset($user)) {
                 $user->forceDelete();
+            }
         } catch (\Exception $e) {
-            $this->warn('Cleanup partial error: ' . $e->getMessage());
+            $this->warn('Cleanup partial error: '.$e->getMessage());
         }
 
         Redis::del($likesKey);
@@ -155,10 +163,12 @@ class VerifyRedis extends Command
 
         if ($fail) {
             $this->error('Verification Failed.');
+
             return 1;
         }
 
         $this->info('🎉 All Redis integrations verified successfully!');
+
         return 0;
     }
 }

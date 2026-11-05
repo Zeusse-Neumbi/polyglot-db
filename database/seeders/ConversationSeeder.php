@@ -5,7 +5,10 @@ namespace Database\Seeders;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
+use Database\Seeders\Helpers\SeedingConfig;
+use Database\Seeders\Helpers\TimeSimulator;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class ConversationSeeder extends Seeder
 {
@@ -14,8 +17,8 @@ class ConversationSeeder extends Seeder
      */
     public function run(): void
     {
-        $config = app(\Database\Seeders\Helpers\SeedingConfig::class);
-        $timeSim = app(\Database\Seeders\Helpers\TimeSimulator::class);
+        $config = app(SeedingConfig::class);
+        $timeSim = app(TimeSimulator::class);
 
         // Scale factors
         $totalUsers = User::count();
@@ -33,7 +36,7 @@ class ConversationSeeder extends Seeder
         while ($created < $targetConversations) {
             $batch = min($chunkSize, $targetConversations - $created);
 
-            // 1. Create Conversations One by One (to get ID) 
+            // 1. Create Conversations One by One (to get ID)
             // but generate logic in loop
 
             for ($i = 0; $i < $batch; $i++) {
@@ -51,15 +54,16 @@ class ConversationSeeder extends Seeder
                     // Private: EXACTLY 2 users
                     $u1 = rand(1, $totalUsers);
                     $u2 = rand(1, $totalUsers);
-                    while ($u2 === $u1)
+                    while ($u2 === $u1) {
                         $u2 = rand(1, $totalUsers);
+                    }
                     $participants = [$u1, $u2];
                 } else {
                     // Group: at least 3 users
                     $count = rand(3, 15);
                     while (count($participants) < $count) {
                         $uid = rand(1, $totalUsers);
-                        if (!in_array($uid, $participants)) {
+                        if (! in_array($uid, $participants)) {
                             $participants[] = $uid;
                         }
                     }
@@ -92,7 +96,7 @@ class ConversationSeeder extends Seeder
                         'role' => $role,
                     ];
                 }
-                \Illuminate\Support\Facades\DB::table('conversation_user')->insert($pivotData);
+                DB::table('conversation_user')->insert($pivotData);
 
                 // Messages - use centralized config
                 $msgRange = $config->getMessagesPerConversation();
@@ -107,13 +111,13 @@ class ConversationSeeder extends Seeder
                     // Use FakerPool for faster image URL generation
                     $hasAttachment = rand(1, 100) <= $attachmentProb;
                     $attachments = $hasAttachment ? json_encode([
-                        ['type' => ['image', 'video', 'file'][rand(0, 2)], 'url' => FakerPool::randomImageUrl()]
+                        ['type' => ['image', 'video', 'file'][rand(0, 2)], 'url' => FakerPool::randomImageUrl()],
                     ]) : null;
 
                     $messagesData[] = [
                         'conversation_id' => $conv->id,
                         'sender_id' => $senderId,
-                        'body' => \Database\Seeders\Helpers\SeedingConfig::generateMessageContent(),
+                        'body' => SeedingConfig::generateMessageContent(),
                         'attachments' => $attachments,
                         'is_read' => rand(0, 1),
                         'created_at' => $sentAt->toDateTimeString(),
@@ -121,8 +125,8 @@ class ConversationSeeder extends Seeder
                 }
 
                 // WRAP IN TRANSACTION for faster writes
-                if (!empty($messagesData)) {
-                    \Illuminate\Support\Facades\DB::transaction(function () use ($messagesData) {
+                if (! empty($messagesData)) {
+                    DB::transaction(function () use ($messagesData) {
                         Message::insert($messagesData);
                     });
                 }

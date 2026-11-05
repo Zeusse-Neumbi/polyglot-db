@@ -10,6 +10,7 @@ class SessionAudit extends Model
     use HasFactory;
 
     protected $connection = 'mongodb';
+
     protected $collection = 'sessions_audit';
 
     protected $fillable = [

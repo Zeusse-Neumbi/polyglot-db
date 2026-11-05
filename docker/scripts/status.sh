@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🔍 TP_BD Enterprise Stack - Status Check"
+echo "🔍 Polyglot DB stack - Status Check"
 echo "=========================================="
 
 # Check container status

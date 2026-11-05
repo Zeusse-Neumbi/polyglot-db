@@ -10,7 +10,9 @@ class ConversationUser extends Pivot
     use HasFactory;
 
     protected $table = 'conversation_user';
+
     public $incrementing = false;
+
     public $timestamps = false;
 
     protected $fillable = [

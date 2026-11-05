@@ -4,7 +4,10 @@ namespace Database\Seeders;
 
 use App\Models\Page;
 use App\Models\User;
+use Database\Seeders\Helpers\SeedingConfig;
+use Database\Seeders\Helpers\TimeSimulator;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class PageSeeder extends Seeder
 {
@@ -13,8 +16,8 @@ class PageSeeder extends Seeder
      */
     public function run(): void
     {
-        $config = app(\Database\Seeders\Helpers\SeedingConfig::class);
-        $timeSim = app(\Database\Seeders\Helpers\TimeSimulator::class);
+        $config = app(SeedingConfig::class);
+        $timeSim = app(TimeSimulator::class);
 
         $limit = $config->getPageCount();
         $this->command->info("Creating {$limit} Pages with followers...");
@@ -47,14 +50,16 @@ class PageSeeder extends Seeder
             foreach ($pages as $page) {
                 // Pages can be popular
                 $followerCount = rand(10, 100);
-                if (rand(1, 100) > 90)
-                    $followerCount = rand(500, 2000); // Influencer page
+                if (rand(1, 100) > 90) {
+                    $followerCount = rand(500, 2000);
+                } // Influencer page
 
                 $followerIds = [];
-                // If count is huge, picking randoms is slow. 
+                // If count is huge, picking randoms is slow.
                 // For simplified seeding, just pick loop.
-                for ($k = 0; $k < $followerCount; $k++)
+                for ($k = 0; $k < $followerCount; $k++) {
                     $followerIds[] = rand(1, $totalUsers);
+                }
                 $followerIds = array_unique($followerIds);
 
                 foreach ($followerIds as $userId) {
@@ -69,10 +74,10 @@ class PageSeeder extends Seeder
                 }
             }
 
-            if (!empty($followersData)) {
+            if (! empty($followersData)) {
                 foreach (array_chunk($followersData, 1000) as $chunk) {
                     try {
-                        \Illuminate\Support\Facades\DB::table('page_followers')->insert($chunk);
+                        DB::table('page_followers')->insert($chunk);
                     } catch (\Exception $e) {
                     }
                 }
