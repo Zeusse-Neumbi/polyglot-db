@@ -3,6 +3,8 @@
 A hands-on lab for polyglot persistence: one Laravel social-network workload
 running on MariaDB, MongoDB, and Redis, with Docker, Prometheus, and Grafana.
 
+![Polyglot DB landing page](docs/screenshots/landing.png)
+
 [![CI](https://github.com/Zeusse-Neumbi/polyglot-db/actions/workflows/ci.yml/badge.svg)](https://github.com/Zeusse-Neumbi/polyglot-db/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![PHP](https://img.shields.io/badge/PHP-8.3-777BB4?logo=php&logoColor=white)
