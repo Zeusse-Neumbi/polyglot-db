@@ -61,7 +61,8 @@ More detail: [`docs/architecture.md`](docs/architecture.md).
 ## Implemented
 
 - Laravel model layer for the relational and document stores.
-- 13 migrations for the relational schema and MongoDB collections.
+- 13 migrations for the relational schema, plus Eloquent models for the MongoDB
+  collections.
 - Factories and modular seeders for users, friendships, posts, comments,
   reactions, groups, pages, conversations, messages, notifications, and session
   audits.
@@ -78,7 +79,7 @@ More detail: [`docs/architecture.md`](docs/architecture.md).
   Docker monitoring, and host monitoring.
 - `traffic:simulate` command with a power-law user distribution and realistic
   action mix.
-- Unit/feature test suite and a live integration test group for the Docker stack.
+- Pest test harness with a health endpoint and opt-in live database checks.
 
 ## Not implemented yet
 
